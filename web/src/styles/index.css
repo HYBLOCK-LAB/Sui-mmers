@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes wave {
+  0%, 100% {
+    transform: translateY(0) translateX(0) rotate(0deg);
+    opacity: 0.3;
+  }
+  25% {
+    transform: translateY(-10px) translateX(5px) rotate(1deg);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translateY(-5px) translateX(-5px) rotate(-1deg);
+    opacity: 0.4;
+  }
+  75% {
+    transform: translateY(-8px) translateX(3px) rotate(0.5deg);
+    opacity: 0.45;
+  }
+}
+
+.wave-animation {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 10px,
+    rgba(255, 255, 255, 0.1) 10px,
+    rgba(255, 255, 255, 0.1) 20px
+  );
+  animation: wave 4s ease-in-out infinite;
+}
+
+@keyframes swim {
+  0% {
+    transform: translateX(0) rotate(0deg);
+  }
+  25% {
+    transform: translateX(25%) rotate(5deg);
+  }
+  50% {
+    transform: translateX(50%) rotate(-5deg);
+  }
+  75% {
+    transform: translateX(75%) rotate(5deg);
+  }
+  100% {
+    transform: translateX(100%) rotate(0deg);
+  }
+}
