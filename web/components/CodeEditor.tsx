@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import { SWIMMER_MODULE_TEMPLATE, DEFAULT_VALUES, SwimmingStyle, STYLE_NAMES } from '@/src/contracts/moveTemplates'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 
 const Editor = dynamic(() => import('@monaco-editor/react'), { 
   ssr: false,
@@ -46,9 +47,11 @@ export function CodeEditor({ onDeploy, disabled }: CodeEditorProps) {
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="bg-gray-50 p-4 border-b">
-        <h3 className="text-lg font-semibold mb-3">파라미터 설정</h3>
+    <Card className="flex flex-col h-full">
+      <CardHeader>
+        <CardTitle>2단계. 선수 파라미터 설정</CardTitle>
+      </CardHeader>
+      <CardContent>
         <div className="space-y-3">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -110,9 +113,9 @@ export function CodeEditor({ onDeploy, disabled }: CodeEditorProps) {
             </div>
           </div>
         </div>
-      </div>
-      
-      <div className="flex-1 min-h-[300px]">
+      </CardContent>
+
+      <CardContent className="flex-1 min-h-[300px]">
         <Editor
           defaultLanguage="rust"
           value={getProcessedCode()}
@@ -127,18 +130,18 @@ export function CodeEditor({ onDeploy, disabled }: CodeEditorProps) {
             automaticLayout: true,
           }}
         />
-      </div>
-      
-      <div className="p-4 border-t bg-muted/50">
+      </CardContent>
+
+      <CardFooter className="justify-end">
         <Button
           onClick={handleDeploy}
           disabled={disabled || isDeploying}
           size="lg"
           className="w-full"
         >
-          {isDeploying ? '배포 중...' : '🚀 NFT 생성하기'}
+          {isDeploying ? '처리 중...' : '🚀 NFT 민팅하기'}
         </Button>
-      </div>
-    </div>
+      </CardFooter>
+    </Card>
   )
 }

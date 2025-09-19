@@ -68,19 +68,18 @@ Navigate to [http://localhost:3000](http://localhost:3000)
 ### Step 1: Connect Your Wallet
 Click the glowing "Connect Wallet" button in the header and select your Sui wallet.
 
-### Step 2: Deploy the Smart Contract
-1. Review the Move code in the editor
-2. Wait for the browser Move compiler to initialize
-3. Click "컨트랙트 배포하기" to compile and deploy to testnet
-4. Approve the transaction in your wallet
+### Step 2: 패키지 1회 배포 (필수)
+1. 브라우저 Move 컴파일러가 준비되면
+2. "패키지 배포하기" 버튼을 눌러 테스트넷에 Swimmer 패키지를 1회 배포합니다
+3. 지갑에서 트랜잭션을 승인합니다
 
-### Step 3: Create Your Swimmer NFT
+### Step 3: 선수 NFT 민팅
 1. Customize your swimmer's attributes:
    - **Name**: Give your swimmer a unique name
    - **Speed**: Set swimming speed (10-100)
    - **Stamina**: Set endurance level (50-100)
    - **Style**: Choose swimming style (자유형, 배영, 평영, 접영)
-2. Click "🚀 Testnet에 배포하기" to mint your swimmer NFT
+2. "🚀 NFT 민팅하기" 버튼으로 선수를 생성합니다
 3. Approve the transaction in your wallet
 
 ### Step 4: Watch Them Swim!

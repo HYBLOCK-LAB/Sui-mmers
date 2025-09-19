@@ -7,6 +7,7 @@ import { Lesson } from '@/components/Lesson'
 import { DeployContract } from '@/components/DeployContract'
 import { SuiService } from '@/lib/services/suiService'
 import { Transaction } from '@mysten/sui/transactions'
+import { Button } from '@/components/ui/button'
 
 interface Swimmer {
   id: string
@@ -110,7 +111,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 shadow-sm">
+      <header className="bg-white border-b border-gray-200">
         <div className="container mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-4">
@@ -129,7 +130,7 @@ export default function Home() {
       <main className="container mx-auto px-4 py-8">
         {/* 레슨 섹션 */}
         <div className="mb-8">
-          <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-md">
+          <div className="bg-white rounded-lg p-6 border border-gray-200">
             <Lesson 
               lessonNumber={1}
               title="Move로 수영 선수 NFT 만들기"
@@ -151,21 +152,17 @@ export default function Home() {
 
         {/* 메인 작업 영역 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* 왼쪽: 컨트랙트 배포 및 에디터 */}
+          {/* 왼쪽: 1단계(패키지 배포) + 2단계(NFT 민팅) */}
           <div className="space-y-6">
-            {/* 스마트 컨트랙트 배포 */}
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-md">
-              <DeployContract onPackageDeployed={setPackageId} />
-            </div>
+            {/* 1단계 */}
+            <DeployContract onPackageDeployed={setPackageId} />
             
-            {/* 코드 에디터 */}
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-md">
-              <CodeEditor onDeploy={handleDeploy} disabled={!packageId || !currentAccount} />
-            </div>
+            {/* 2단계 */}
+            <CodeEditor onDeploy={handleDeploy} disabled={!packageId || !currentAccount} />
           </div>
           
           {/* 오른쪽: 수영장 시각화 */}
-          <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-md">
+          <div>
             <h2 className="text-lg font-bold text-gray-900 mb-4">🏊 수영장</h2>
             <SwimmingPool swimmers={swimmers} />
           </div>
@@ -180,22 +177,23 @@ export default function Home() {
             </p>
           </div>
           
-          <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-md">
+          <div className="bg-white p-6 rounded-lg border border-gray-200">
             <h3 className="font-bold text-gray-900 mb-2">🔗 Testnet Faucet</h3>
             <p className="text-sm text-gray-600 mb-3">
               테스트 SUI 토큰이 필요하신가요?
             </p>
-            <a
-              href="https://faucet.testnet.sui.io"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-medium"
-            >
-              Faucet에서 받기 →
-            </a>
+            <Button asChild variant="secondary" size="sm">
+              <a
+                href="https://faucet.testnet.sui.io"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Faucet에서 받기 →
+              </a>
+            </Button>
           </div>
           
-          <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-md">
+          <div className="bg-white p-6 rounded-lg border border-gray-200">
             <h3 className="font-bold text-gray-900 mb-2">🎯 다음 레슨</h3>
             <p className="text-sm text-gray-600">
               레슨 2: train 함수로 선수 능력치 향상시키기

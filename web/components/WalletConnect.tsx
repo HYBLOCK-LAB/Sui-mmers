@@ -6,9 +6,9 @@ export function WalletConnect() {
   return (
     <div className="flex items-center gap-4">
       <ConnectButton 
-        connectText="Connect Wallet"
-        connectedText="Connected"
-        className="px-6 py-3 rounded-lg font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-sm"
+        connectText="지갑 연결"
+        connectedText="연결됨"
+        className="px-4 py-2 rounded-md font-medium bg-gray-900 text-white hover:bg-gray-800"
       />
       {currentAccount && (
         <div className="bg-gray-100 px-4 py-2 rounded-lg border border-gray-200">

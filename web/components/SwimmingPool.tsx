@@ -45,7 +45,7 @@ export function SwimmingPool({ swimmers }: SwimmingPoolProps) {
 
   if (swimmers.length === 0) {
     return (
-      <div className="bg-gradient-to-b from-cyan-100 to-cyan-300 rounded-xl p-8 h-96 relative overflow-hidden shadow-inner">
+      <div className="bg-gradient-to-b from-cyan-100 to-cyan-300 rounded-xl p-8 h-96 relative overflow-hidden">
         {/* 물결 애니메이션 */}
         <div className="absolute inset-0">
           <div className="wave-animation"></div>
@@ -74,7 +74,7 @@ export function SwimmingPool({ swimmers }: SwimmingPoolProps) {
   }
 
   return (
-    <div className="bg-gradient-to-b from-cyan-100 to-cyan-300 rounded-xl p-8 h-96 relative overflow-hidden shadow-inner">
+    <div className="bg-gradient-to-b from-cyan-100 to-cyan-300 rounded-xl p-8 h-96 relative overflow-hidden">
       {/* 물결 애니메이션 */}
       <div className="absolute inset-0">
         <div className="wave-animation"></div>
@@ -102,7 +102,7 @@ export function SwimmingPool({ swimmers }: SwimmingPoolProps) {
             <div className={`text-4xl ${getSwimmerStyle(swimmer.style)} transition-transform`}>
               🏊
             </div>
-            <div className="ml-3 bg-white/90 rounded-lg px-3 py-1 shadow-lg">
+            <div className="ml-3 bg-white/90 rounded-lg px-3 py-1">
               <div className="font-bold text-sm">{swimmer.name}</div>
               <div className="text-xs text-gray-600">
                 {STYLE_NAMES[swimmer.style as SwimmingStyle]} | 속도: {swimmer.speed}
@@ -118,7 +118,7 @@ export function SwimmingPool({ swimmers }: SwimmingPoolProps) {
       </div>
       
       {/* 능력치 표시 */}
-      <div className="absolute bottom-4 right-4 bg-white/90 rounded-lg p-3 shadow-lg">
+      <div className="absolute bottom-4 right-4 bg-white/90 rounded-lg p-3">
         <h4 className="font-semibold text-sm mb-2">선수 현황</h4>
         {swimmers.map(swimmer => (
           <div key={swimmer.id} className="text-xs mb-1">

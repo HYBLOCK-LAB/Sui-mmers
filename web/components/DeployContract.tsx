@@ -135,9 +135,9 @@ export function DeployContract({ onPackageDeployed }: DeployContractProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>📦 스마트 컨트랙트 배포</CardTitle>
+        <CardTitle>1단계. 패키지 배포</CardTitle>
         <CardDescription>
-          브라우저에서 직접 Move 코드를 컴파일하여 Sui 테스트넷에 배포합니다
+          테스트넷에 Swimmer 패키지를 1회 배포하면, 이후에는 배포 없이 민팅만 진행합니다
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -165,7 +165,7 @@ export function DeployContract({ onPackageDeployed }: DeployContractProps) {
       {packageId ? (
         <div>
           <div className="bg-green-50 p-4 rounded-lg mb-4">
-            <p className="text-sm text-green-700 font-semibold">✅ 컨트랙트 배포 완료!</p>
+            <p className="text-sm text-green-700 font-semibold">✅ 패키지 배포 완료 (한 번만 필요) </p>
             <p className="text-xs text-gray-600 mt-2">
               패키지 ID: <span className="font-mono">{packageId}</span>
             </p>
@@ -175,7 +175,7 @@ export function DeployContract({ onPackageDeployed }: DeployContractProps) {
             variant="outline"
             className="w-full"
           >
-            재배포 하기
+            초기화하고 다시 배포하기
           </Button>
         </div>
       ) : (
@@ -190,8 +190,7 @@ export function DeployContract({ onPackageDeployed }: DeployContractProps) {
           ) : (
             <>
               <p className="text-sm text-gray-600 mb-4">
-                브라우저에서 직접 Move 코드를 컴파일하여 
-                Sui 테스트넷에 스마트 컨트랙트를 배포합니다.
+                브라우저에서 Move 코드를 컴파일하여 테스트넷에 패키지를 배포합니다. 이후 NFT 민팅은 2단계에서 진행합니다.
               </p>
               
               {errorMessage && (
@@ -205,13 +204,11 @@ export function DeployContract({ onPackageDeployed }: DeployContractProps) {
                 disabled={isDeploying || !currentAccount || !compilerReady}
                 className="w-full"
               >
-                {isDeploying ? '배포 중...' : '컨트랙트 배포하기'}
+                {isDeploying ? '배포 중...' : '패키지 배포하기'}
               </Button>
               
               {!currentAccount && (
-                <p className="text-xs text-red-500 mt-2">
-                  지갑을 먼저 연결해주세요!
-                </p>
+                <p className="text-xs text-red-500 mt-2">지갑을 먼저 연결해주세요!</p>
               )}
             </>
           )}
