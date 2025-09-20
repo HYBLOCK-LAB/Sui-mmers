@@ -1,6 +1,5 @@
 import React, { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
-import { LESSON } from '@/lib/lession';
 
 type MarkdownBlock =
   | { type: 'heading'; level: number; content: string }
@@ -9,8 +8,7 @@ type MarkdownBlock =
 
 export interface LessonDescriptionProps {
   title?: string;
-  lesson: number;
-  chapter: number;
+  markdown: string;
   className?: string;
 }
 
@@ -86,8 +84,7 @@ const renderInline = (text: string, keyPrefix: string): ReactNode[] => {
   });
 };
 
-export function LessonDescription({ title, lesson, chapter, className }: LessonDescriptionProps) {
-  const markdown = LESSON[lesson][chapter].description;
+export function LessonDescription({ title, markdown, className }: LessonDescriptionProps) {
   const blocks = parseMarkdown(markdown);
 
   return (
