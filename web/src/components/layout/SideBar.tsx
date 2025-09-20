@@ -1,30 +1,14 @@
-const SESSION_DATA = [
-  {
-    id: 'session-1',
-    title: 'Session 1 · Intro to Sui & Move',
-    summary: 'Design the Swimmer NFT and mint your first swimmer.',
-    lessons: [
-      { lessonNumber: 1, title: 'Lesson 1 · Swimmer struct basics' },
-      { lessonNumber: 2, title: 'Lesson 2 · mint_swimmer function' },
-      { lessonNumber: 3, title: 'Lesson 3 · Lazy progress updates' },
-    ],
-  },
-  {
-    id: 'session-2',
-    title: 'Session 2 · PTB & item interactions',
-    summary: 'Create TunaCan items and coordinate them with Programmable Transaction Blocks.',
-    lessons: [
-      { lessonNumber: 4, title: 'Lesson 4 · TunaCan struct & mint_tuna' },
-      { lessonNumber: 5, title: 'Lesson 5 · eat_tuna PTB flow' },
-    ],
-  },
-];
+﻿import Link from 'next/link';
+import { LESSONS, getLessonRoute } from '@/lib/lessons';
 
 interface SidebarProps {
   showHeader?: boolean;
+  activeLessonSlug?: string;
+  activeChapterSlug?: string;
+  onNavigate?: () => void;
 }
 
-export function Sidebar({ showHeader = true }: SidebarProps) {
+export function Sidebar({ showHeader = true, activeLessonSlug, activeChapterSlug, onNavigate }: SidebarProps) {
   return (
     <div className="space-y-6">
       {showHeader && (
@@ -34,21 +18,31 @@ export function Sidebar({ showHeader = true }: SidebarProps) {
         </div>
       )}
       <nav aria-label="Sui-mmers course outline" className="space-y-4">
-        {SESSION_DATA.map((session) => (
-          <section key={session.id} className="space-y-3">
+        {LESSONS.map((lesson, lessonIndex) => (
+          <section key={lesson.slug} className="space-y-3">
             <div>
-              <h3 className="text-sm font-semibold text-gray-900">{session.title}</h3>
-              <p className="text-xs text-gray-500">{session.summary}</p>
+              <h3 className="text-sm font-semibold text-gray-900">{lesson.title}</h3>
+              <p className="text-xs text-gray-500">{lesson.summary}</p>
             </div>
             <ol className="space-y-2 border-l border-gray-200 pl-4 text-sm text-gray-700">
-              {session.lessons.map((lesson) => (
-                <li key={lesson.lessonNumber} className="flex gap-2">
-                  <span className="text-xs font-medium text-gray-400">
-                    {lesson.lessonNumber.toString().padStart(2, '0')}
-                  </span>
-                  <span className="flex-1 leading-5">{lesson.title}</span>
-                </li>
-              ))}
+              {lesson.chapters.map((chapter, chapterIndex) => {
+                const href = getLessonRoute(lesson.slug, chapter.slug);
+                const isActive = lesson.slug === activeLessonSlug && chapter.slug === activeChapterSlug;
+
+                return (
+                  <li key={chapter.slug}>
+                    <Link
+                      href={href}
+                      onClick={onNavigate}
+                      className={`flex items-start gap-2 rounded-md px-2 py-1 transition-colors ${
+                        isActive ? 'bg-blue-50 text-blue-700 border-l-2 border-blue-500' : 'hover:bg-gray-100'
+                      }`}
+                    >
+                      <span className="flex-1 leading-5">{chapter.title}</span>
+                    </Link>
+                  </li>
+                );
+              })}
             </ol>
           </section>
         ))}

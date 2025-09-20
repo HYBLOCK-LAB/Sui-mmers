@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
 import { Transaction } from '@mysten/sui/transactions';
-import { LearningLayout, useSidebar } from '@/components/layout/LearningLayout';
 import { WalletConnect } from '@/components/WalletConnect';
 import { SwimmingPool } from '@/components/SwimmingPool';
 import { DeployContract } from '@/components/DeployContract';
@@ -13,6 +12,7 @@ import { SuiService, CLOCK_OBJECT_ID } from '@/lib/services/suiService';
 import { SwimmerSummary, TunaCanItem } from '@/lib/types/swimmer';
 
 export default function Gameplay() {
+<<<<<<< HEAD
   return (
     <LearningLayout>
       <GameplayContent />
@@ -28,9 +28,11 @@ function GameplayContent() {
   };
   
   const currentAccount = mockCurrentAccount; // 실제 currentAccount 대신 mock 사용
+=======
+  const currentAccount = useCurrentAccount();
+>>>>>>> 02ba612823beee9089da35e5e6f77b3e46cea3f0
   const { mutate: signAndExecute } = useSignAndExecuteTransaction();
   const [suiService] = useState(() => new SuiService('testnet'));
-  const { openSidebar } = useSidebar();
 
   const [swimmers, setSwimmers] = useState<SwimmerSummary[]>([]);
   const [tunaCans, setTunaCans] = useState<TunaCanItem[]>([]);
@@ -40,6 +42,7 @@ function GameplayContent() {
   const [selectedSwimmerId, setSelectedSwimmerId] = useState('');
   const [selectedTunaId, setSelectedTunaId] = useState('');
 
+<<<<<<< HEAD
   // Mock 데이터
   const mockSwimmers: SwimmerSummary[] = [
     {
@@ -112,6 +115,26 @@ function GameplayContent() {
     console.log('🎭 Mock 모드: Swimmers 데이터 로드');
     setSwimmers(mockSwimmers);
   }, []);
+=======
+  const fetchSwimmers = useCallback(async () => {
+    if (!currentAccount?.address) return;
+
+    try {
+      const userSwimmers = await suiService.getUserSwimmers(currentAccount.address);
+      const formattedSwimmers: SwimmerSummary[] = userSwimmers.map((obj: any) => ({
+        id: obj.data?.objectId || '',
+        name: obj.data?.content?.fields?.name || 'Unknown Swimmer',
+        species: obj.data?.content?.fields?.species || 'Mystery Species',
+        distanceTraveled: Number(obj.data?.content?.fields?.distance_traveled || 0),
+        baseSpeedPerHour: Number(obj.data?.content?.fields?.base_speed_per_hour || 0),
+        lastUpdateTimestampMs: Number(obj.data?.content?.fields?.last_update_timestamp_ms || Date.now()),
+      }));
+      setSwimmers(formattedSwimmers);
+    } catch (error) {
+      console.error('Failed to fetch swimmers:', error);
+    }
+  }, [currentAccount, suiService]);
+>>>>>>> 02ba612823beee9089da35e5e6f77b3e46cea3f0
 
   const fetchTunaCans = useCallback(async () => {
     // Mock 모드에서는 실제 네트워크 호출 대신 mock 데이터 사용
@@ -159,6 +182,7 @@ function GameplayContent() {
   const handleMintSwimmer = async (name: string, species: string) => {
     console.log('🎭 Mock 모드: Swimmer 민팅 시뮬레이션');
     setIsLoading(true);
+<<<<<<< HEAD
     
     // Mock 딜레이
     setTimeout(() => {
@@ -174,13 +198,90 @@ function GameplayContent() {
       setSwimmers(prev => [...prev, newSwimmer]);
       setSelectedSwimmerId(newSwimmer.id);
       alert('🎉 새로운 Swimmer NFT가 도착했어요! (Mock 모드)');
+=======
+    try {
+      const tx = new Transaction();
+      tx.moveCall({
+        target: `${packageId}::swimmer::mint_swimmer`,
+        arguments: [tx.pure.string(name), tx.pure.string(species), tx.object(CLOCK_OBJECT_ID)],
+      });
+
+      signAndExecute(
+        {
+          transaction: tx,
+        },
+        {
+          onSuccess: () => {
+            alert('🎉 새로운 Swimmer NFT가 도착했어요!');
+            fetchSwimmers();
+          },
+          onError: (error) => {
+            console.error('Transaction failed:', error);
+            alert('트랜잭션 실패: ' + error.message);
+          },
+        }
+      );
+    } catch (error) {
+      console.error('Failed to create swimmer:', error);
+      alert('수영 선수 생성 실패!');
+    } finally {
+>>>>>>> 02ba612823beee9089da35e5e6f77b3e46cea3f0
       setIsLoading(false);
     }, 1000);
+  };
+
+  const handleUpdateProgress = async () => {
+    if (!currentAccount) {
+      alert('먼저 지갑을 연결해주세요!');
+      return;
+    }
+
+    if (!packageId) {
+      alert('먼저 스마트 컨트랙트를 배포해주세요!');
+      return;
+    }
+
+    if (!selectedSwimmerId) {
+      alert('업데이트할 Swimmer를 선택해주세요!');
+      return;
+    }
+
+    setActionLoading('update');
+    try {
+      const tx = new Transaction();
+      tx.moveCall({
+        target: `${packageId}::swimmer::update_progress`,
+        arguments: [tx.object(selectedSwimmerId), tx.object(CLOCK_OBJECT_ID)],
+      });
+
+      signAndExecute(
+        {
+          transaction: tx,
+        },
+        {
+          onSuccess: () => {
+            alert('⏱ Swimmer가 자동으로 앞으로 나아갔어요!');
+            fetchSwimmers();
+            setActionLoading(null);
+          },
+          onError: (error) => {
+            console.error('Update progress failed:', error);
+            alert('업데이트 실패: ' + error.message);
+            setActionLoading(null);
+          },
+        }
+      );
+    } catch (error) {
+      console.error('Failed to update progress:', error);
+      alert('업데이트 실패: ' + (error as Error).message);
+      setActionLoading(null);
+    }
   };
 
   const handleMintTuna = async () => {
     console.log('🎭 Mock 모드: TunaCan 민팅 시뮬레이션');
     setActionLoading('mintTuna');
+<<<<<<< HEAD
     
     setTimeout(() => {
       const newTuna: TunaCanItem = {
@@ -191,11 +292,41 @@ function GameplayContent() {
       setTunaCans(prev => [...prev, newTuna]);
       setSelectedTunaId(newTuna.id);
       alert('🍣 새로운 TunaCan이 인벤토리에 추가됐어요! (Mock 모드)');
+=======
+    try {
+      const tx = new Transaction();
+      tx.moveCall({
+        target: `${packageId}::swimmer::mint_tuna`,
+        arguments: [],
+      });
+
+      signAndExecute(
+        {
+          transaction: tx,
+        },
+        {
+          onSuccess: () => {
+            alert('🍣 참치 통조림이 인벤토리에 추가되었어요!');
+            fetchTunaCans();
+            setActionLoading(null);
+          },
+          onError: (error) => {
+            console.error('Mint tuna failed:', error);
+            alert('참치 민팅 실패: ' + error.message);
+            setActionLoading(null);
+          },
+        }
+      );
+    } catch (error) {
+      console.error('Failed to mint tuna:', error);
+      alert('참치 민팅 실패: ' + (error as Error).message);
+>>>>>>> 02ba612823beee9089da35e5e6f77b3e46cea3f0
       setActionLoading(null);
     }, 800);
   };
 
   const handleEatTuna = async () => {
+<<<<<<< HEAD
     console.log('🎭 Mock 모드: TunaCan 먹이기 시뮬레이션');
     if (!selectedSwimmerId || !selectedTunaId) return;
     
@@ -253,6 +384,57 @@ function GameplayContent() {
       ));
       
       alert('⏱ Swimmer가 자동으로 앞으로 나아갔어요! (Mock 모드)');
+=======
+    if (!currentAccount) {
+      alert('먼저 지갑을 연결해주세요!');
+      return;
+    }
+
+    if (!packageId) {
+      alert('먼저 스마트 컨트랙트를 배포해주세요!');
+      return;
+    }
+
+    if (!selectedSwimmerId) {
+      alert('먹이를 줄 Swimmer를 선택해주세요!');
+      return;
+    }
+
+    if (!selectedTunaId) {
+      alert('먼저 참치 통조림을 준비해주세요!');
+      return;
+    }
+
+    setActionLoading('eatTuna');
+    try {
+      const tx = new Transaction();
+      tx.moveCall({
+        target: `${packageId}::swimmer::eat_tuna`,
+        arguments: [tx.object(selectedSwimmerId), tx.object(selectedTunaId), tx.object(CLOCK_OBJECT_ID)],
+      });
+
+      signAndExecute(
+        {
+          transaction: tx,
+        },
+        {
+          onSuccess: () => {
+            alert('💪 참치 보너스로 거리가 증가했어요!');
+            fetchSwimmers();
+            fetchTunaCans();
+            setActionLoading(null);
+          },
+          onError: (error) => {
+            console.error('Eat tuna failed:', error);
+            alert('먹이 주기 실패: ' + error.message);
+            setActionLoading(null);
+          },
+        }
+      );
+    } catch (error) {
+      console.error('Failed to eat tuna:', error);
+      alert('먹이 주기 실패: ' + (error as Error).message);
+>>>>>>> 02ba612823beee9089da35e5e6f77b3e46cea3f0
       setActionLoading(null);
     }, 600);
   };
@@ -261,6 +443,7 @@ function GameplayContent() {
   const selectedTuna = tunaCans.find((tuna) => tuna.id === selectedTunaId);
 
   return (
+<<<<<<< HEAD
     <div className="space-y-12">
       {/* Mock 모드 배너 */}
       <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-xl text-center">
@@ -273,18 +456,19 @@ function GameplayContent() {
         </div>
       </div>
 
+=======
+    <div className="min-h-screen bg-gray-50">
+>>>>>>> 02ba612823beee9089da35e5e6f77b3e46cea3f0
       <header className="bg-white border-b border-gray-200">
-        <div className="flex flex-col gap-4 px-4 py-6 md:flex-row md:items-center md:justify-between">
+        <div className="container mx-auto px-4 py-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-sm font-semibold text-purple-600">🎮 Gameplay Console</p>
-            <h1 className="text-3xl font-bold text-gray-900">Swimmer를 실시간으로 관리하세요</h1>
-            <p className="mt-1 text-sm text-gray-600">
-              자동 전진과 아이템 소비를 Programmable Transaction Block으로 안전하게 조합해 보세요.
-            </p>
+            <h1 className="text-3xl font-bold text-gray-900">Swimmer와 상호작용하기</h1>
+            <p className="text-sm text-gray-600 mt-1">자동 전진, 아이템 사용, PTB 실습을 이 화면에서 진행하세요.</p>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="outline" className="lg:hidden" onClick={openSidebar}>
-              📘 코스 열람
+            <Button asChild variant="outline" size="sm">
+              <Link href="/">← 메인으로</Link>
             </Button>
             {/* Mock 지갑 상태 표시 */}
             <div className="bg-green-100 border border-green-300 rounded-lg px-4 py-2">
@@ -302,6 +486,7 @@ function GameplayContent() {
         </div>
       </header>
 
+<<<<<<< HEAD
       <main className="space-y-12">
         <section className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -358,6 +543,32 @@ function GameplayContent() {
                 console.log('🎭 Mock 테스트 모드 활성화');</div>
             </div>
           </div>
+=======
+      <main className="container mx-auto px-4 py-12 space-y-12">
+        <section className="grid gap-6 md:grid-cols-3">
+          <div className="rounded-xl border border-blue-100 bg-blue-50 px-5 py-4">
+            <p className="text-xs uppercase text-blue-600 font-semibold">연결된 지갑</p>
+            <p className="mt-2 text-sm font-mono text-gray-800">
+              {currentAccount?.address
+                ? `${currentAccount.address.slice(0, 6)}...${currentAccount.address.slice(-4)}`
+                : '지갑 미연결'}
+            </p>
+          </div>
+          <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-5 py-4">
+            <p className="text-xs uppercase text-emerald-600 font-semibold">보유한 Swimmer</p>
+            <p className="mt-2 text-2xl font-bold text-emerald-700">{swimmers.length}</p>
+          </div>
+          <div className="rounded-xl border border-purple-100 bg-purple-50 px-5 py-4">
+            <p className="text-xs uppercase text-purple-600 font-semibold">패키지 상태</p>
+            <p className="mt-2 text-sm text-gray-800">{packageId ? '✅ 준비 완료' : '배포 필요'}</p>
+            {packageId && <p className="mt-1 text-xs font-mono text-gray-500 break-all">{packageId}</p>}
+          </div>
+        </section>
+
+        <section className="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-6">
+          <DeployContract onPackageDeployed={setPackageId} />
+          <CodeEditor onMint={handleMintSwimmer} disabled={!packageId || !currentAccount || isLoading} />
+>>>>>>> 02ba612823beee9089da35e5e6f77b3e46cea3f0
         </section>
 
         <section className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
@@ -366,7 +577,11 @@ function GameplayContent() {
             <span className="text-xs text-gray-500">실시간으로 Swimmer를 조작하고 관전하세요</span>
           </div>
           <div className="h-auto">
+<<<<<<< HEAD
             <SwimmingPool 
+=======
+            <SwimmingPool
+>>>>>>> 02ba612823beee9089da35e5e6f77b3e46cea3f0
               swimmers={swimmers}
               tunaCans={tunaCans}
               selectedSwimmerId={selectedSwimmerId}
@@ -383,6 +598,15 @@ function GameplayContent() {
           </div>
         </section>
       </main>
+<<<<<<< HEAD
+=======
+
+      <footer className="bg-white border-t border-gray-200 mt-12">
+        <div className="container mx-auto px-4 py-6 text-center text-sm text-gray-600">
+          Made with 🌊 for Sui-mmers · Keep experimenting!
+        </div>
+      </footer>
+>>>>>>> 02ba612823beee9089da35e5e6f77b3e46cea3f0
     </div>
   );
 }
