@@ -397,20 +397,40 @@ Celebrate! your swimmer is now live!`,
 
 **Practice**
 
-In the same file, try adding a \`TunaCan\` struct and a \`mint_tuna\` function to issue tuna cans. It will be very similar to \`mint_swimmer\`!`,
+In the same file, try adding a \`TunaCan\` struct and a \`mint_tuna\` function to issue tuna cans. It will be very similar to \`mint_swimmer\`!
+
+Each field in the struct must be set as follows:
+
+- id: Generate a new unique ID for the object by calling object::new(ctx).
+
+- boost: Set this to a default value of 10.
+
+- size: Set this to a default value of 10.
+
+- color: Convert the incoming color parameter (which is a vector<u8>) into a String by using string::from_utf8(color).unwrap().
+`,
+
         readonly: false,
         codeTemplate: `module sui_mmers::tuna_items {
     use sui::object::{Self, UID};
     use sui::tx_context::{Self, TxContext};
     use sui::transfer;
+    use std::string::{Self, String};
 
     public struct TunaCan has key, store {
         id: UID,
-        energy: u64,
+        boost: u64,
+        size: u64,
+        color: String,
     }
 
-    public entry fun mint_tuna(ctx: &mut TxContext) {
-        let tuna = TunaCan { id: object::new(ctx), energy: 10 };
+    public entry fun mint_tuna(ctx: &mut TxContext, color: vector<u8>) {
+        let tuna = TunaCan { 
+            id: object::new(ctx), 
+            boost: 10,
+            size: 10,
+            color: string::from_utf8(color).unwrap(),
+        };
         transfer::public_transfer(tuna, tx_context::sender(ctx));
     }
 }
@@ -419,13 +439,16 @@ In the same file, try adding a \`TunaCan\` struct and a \`mint_tuna\` function t
     use sui::object::{Self, UID};
     use sui::tx_context::{Self, TxContext};
     use sui::transfer;
+    use std::string::{Self, String};
 
     public struct TunaCan has key, store {
         id: UID,
-        energy: u64,
+        boost: u64,
+        size: u64,
+        color: String,
     }
 
-    public entry fun mint_tuna(ctx: &mut TxContext) {
+    public entry fun mint_tuna(ctx: &mut TxContext, color: vector<u8>) {
         // TODO: create a TunaCan and transfer it to the caller.
     }
 }
@@ -454,48 +477,74 @@ A PTB is a technology that bundles multiple actions like these into a single tra
 
 **Practice**
 
-Create an \`eat_tuna\` function. This function will take two objects as arguments: a \`Swimmer\` and a \`TunaCan\`. It should increase the \`Swimmer's distance_traveled\` by 10 and completely delete the \`TunaCan\` using \`object::delete\`. Remember to use \`&mut Swimmer\` (a mutable reference) to modify the Swimmer's values, and to take the entire \`TunaCan\` object by value to consume and destroy it!
+Create an \`eat_tuna\` function. \`eat_tuna\` function adds the \`boost\` value from the tuna can directly to the swimmer's \`distance_traveled\`. However, since the \`Swimmer\` struct also has \`boost\` and \`hunger\` fields, it's more logical for the act of 'eating' to affect these stats.
+
+- \`hunger Field Update\`: The most direct result of 'eating' is satisfying hunger. swimmer.hunger is calculated by size * 10.
+
+- \`boost Field Update\`: Instead of adding the tuna can's boost value directly to distance_traveled, it is now added to the swimmer's own boost stat. This allows the boost to be used as a temporary effect or a cumulative power-up.
 
 `,
         readonly: false,
         codeTemplate: `module sui_mmers::tuna_buffet {
     use sui::object::{Self, UID};
+    use sui::transfer;
+    use sui::tx_context::{Self, TxContext};
+    use std::string::{Self, String};
 
-    public struct Swimmer has key, store {
+    public struct Swimmer has key {
         id: UID,
+        name: String,
+        color: String,
+        speed: u64,
+        hunger: u64,
+        boost: u64,
         distance_traveled: u64,
+        last_update_timestamp_ms: u64,
     }
 
     public struct TunaCan has key, store {
         id: UID,
-        energy: u64,
+        boost: u64,
+        size: u64,
+        color: String,
     }
 
     public entry fun eat_tuna(swimmer: &mut Swimmer, tuna: TunaCan) {
-        let TunaCan { id, energy } = tuna;
-        swimmer.distance_traveled = swimmer.distance_traveled + energy;
+        let TunaCan { id, boost } = tuna;
+        swimmer.boost = swimmer.boost + boost;
+        swimmer.hunger = size * 10;
         object::delete(id);
     }
 }
 `,
         codeSkeletone: `module sui_mmers::tuna_buffet {
     use sui::object::{Self, UID};
+    use sui::transfer;
+    use sui::tx_context::{Self, TxContext};
+    use std::string::{Self, String};
 
-    public struct Swimmer has key, store {
+    public struct Swimmer has key {
         id: UID,
+        name: String,
+        color: String,
+        speed: u64,
+        hunger: u64,
+        boost: u64,
         distance_traveled: u64,
+        last_update_timestamp_ms: u64,
     }
 
     public struct TunaCan has key, store {
         id: UID,
-        energy: u64,
+        boost: u64,
+        size: u64,
+        color: String,
     }
 
     public entry fun eat_tuna(swimmer: &mut Swimmer, tuna: TunaCan) {
-        // TODO: add energy to the swimmer and delete the tuna object.
+        // TODO: add boost to the swimmer and delete the tuna object.
     }
-}
-`,
+}`,
       },
       {
         slug: 'deploy-tuna',
@@ -514,53 +563,41 @@ Your swimmers need fuel. Package the TunaCan logic and push it on-chain.
     use sui::tx_context::{Self, TxContext};
     use sui::transfer;
 
-    const ENERGY_PER_CAN: u64 = 10;
+    const BOOST_PER_CAN: u64 = 10;
 
-    public struct Swimmer has key, store {
+    public struct Swimmer has key {
         id: UID,
+        name: String,
+        color: String,
+        speed: u64,
+        hunger: u64,
+        boost: u64,
         distance_traveled: u64,
+        last_update_timestamp_ms: u64,
     }
 
     public struct TunaCan has key, store {
         id: UID,
-        energy: u64,
+        boost: u64,
+        size: u64,
+        color: String,
     }
 
-    public entry fun mint_tuna(ctx: &mut TxContext) {
-        let tuna = TunaCan { id: object::new(ctx), energy: ENERGY_PER_CAN };
+    public entry fun mint_tuna(ctx: &mut TxContext, color: vector<u8>) {
+        let tuna = TunaCan { 
+            id: object::new(ctx), 
+            boost: 10,
+            size: 10,
+            color: string::from_utf8(color).unwrap(),
+        };
         transfer::public_transfer(tuna, tx_context::sender(ctx));
     }
 
     public entry fun eat_tuna(swimmer: &mut Swimmer, tuna: TunaCan) {
-        let TunaCan { id, energy } = tuna;
-        swimmer.distance_traveled = swimmer.distance_traveled + energy;
+        let TunaCan { id, boost } = tuna;
+        swimmer.boost = swimmer.boost + boost;
+        swimmer.hunger = size * 10;
         object::delete(id);
-    }
-}
-`,
-        codeSkeletone: `module sui_mmers::tuna_service {
-    use sui::object::{Self, UID};
-    use sui::tx_context::{Self, TxContext};
-    use sui::transfer;
-
-    const ENERGY_PER_CAN: u64 = 10;
-
-    public struct Swimmer has key, store {
-        id: UID,
-        distance_traveled: u64,
-    }
-
-    public struct TunaCan has key, store {
-        id: UID,
-        energy: u64,
-    }
-
-    public entry fun mint_tuna(ctx: &mut TxContext) {
-        // TODO: mint a TunaCan with ENERGY_PER_CAN energy.
-    }
-
-    public entry fun eat_tuna(swimmer: &mut Swimmer, tuna: TunaCan) {
-        // TODO: consume the tuna and boost the swimmer.
     }
 }
 `,
