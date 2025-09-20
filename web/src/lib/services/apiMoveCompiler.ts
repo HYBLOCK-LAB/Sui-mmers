@@ -43,7 +43,8 @@ export class ApiMoveCompiler {
    */
   static async createDeployTransaction(
     moduleName: string,
-    sourceCode: string
+    sourceCode: string,
+    senderAddress: string
   ): Promise<Transaction> {
     // API를 통해 Move 코드 컴파일
     const { bytecode, dependencies } = await this.compileMove(moduleName, sourceCode)
@@ -51,120 +52,83 @@ export class ApiMoveCompiler {
     // Transaction 생성
     const tx = new Transaction()
     
+    // 가스 예산 설정 (디버깅용 큰 값)
+    tx.setGasBudget(100000000)
+    
+    // sender 주소 검증
+    if (!senderAddress) {
+      throw new Error('Sender address is required for deployment')
+    }
+    console.log('Deploying with sender:', senderAddress)
+    
     // Base64를 Uint8Array로 변환
     const bytecodeBytes = fromBase64(bytecode)
+    console.log('Bytecode length:', bytecodeBytes.length)
+    console.log('Dependencies:', dependencies)
     
-    // 패키지 배포
-    const result = tx.publish({
+    // 패키지 배포 - SDK 공식 문서에 따라 배열로 반환됨
+    const [upgradeCap] = tx.publish({
       modules: [bytecodeBytes],
       dependencies: dependencies,
     })
     
-    // UpgradeCap 전송
-    if (result) {
-      const upgradeCap = Array.isArray(result) ? result[0] : result
-      tx.transferObjects([upgradeCap], tx.gas)
-    }
+    // UpgradeCap을 sender에게 명시적으로 전송 (필수)
+    // SDK 문서: "you must explicitly transfer the UpgradeCap object"
+    // tx.pure.address() 사용하여 주소 타입 명시
+    tx.transferObjects([upgradeCap], tx.pure.address(senderAddress))
+    
+    // 디버깅: 트랜잭션 상세 정보 출력
+    console.log('Transaction built with sender:', senderAddress)
+    console.log('Transaction details:', {
+      sender: senderAddress,
+      upgradeCap: upgradeCap,
+      commands: tx.blockData.transactions
+    })
     
     return tx
   }
   
   /**
-   * swimmer.move 소스 코드 템플릿
+   * swimmer.move 소스 코드 템플릿 (초보자용 간단한 버전)
+   * 단계별로 복잡도를 높여갈 수 있도록 기본 구조만 포함
    */
   static getSwimmerMoveTemplate(): string {
     return `module swimming::swimmer {
     use sui::object::{Self, UID};
     use sui::transfer;
     use sui::tx_context::{Self, TxContext};
-    use sui::event;
     use std::string::{Self, String};
     
-    /// Swimmer NFT
+    /// Swimmer NFT - 우리의 수영 선수!
     public struct Swimmer has key, store {
         id: UID,
         name: String,
-        speed: u64,
-        style: u8,  // 0: 자유형, 1: 배영, 2: 평영, 3: 접영
-        stamina: u64,
-        medals: u64,
+        species: String,
+        distance_traveled: u64,
     }
     
-    /// Event emitted when a new swimmer is created
-    public struct SwimmerCreated has copy, drop {
-        swimmer_id: address,
-        name: String,
-        creator: address,
-    }
-    
-    /// Event emitted when a swimmer is trained
-    public struct SwimmerTrained has copy, drop {
-        swimmer_id: address,
-        new_speed: u64,
-        new_stamina: u64,
-    }
-    
-    /// 에러 코드
-    const EInvalidStyle: u64 = 0;
-    const ENotEnoughStamina: u64 = 1;
-    const EInvalidLength: u64 = 2;
-    const EMaxSpeedReached: u64 = 3;
-    const EMaxStaminaReached: u64 = 4;
-    
-    /// Swimmer NFT 생성
-    public entry fun create_swimmer(
-        name: vector<u8>, 
-        style: u8,
+    /// 새로운 Swimmer NFT 생성하기
+    public entry fun mint_swimmer(
+        name: vector<u8>,
+        species: vector<u8>,
         ctx: &mut TxContext
     ) {
-        assert!(style < 4, EInvalidStyle);
-        
         let swimmer = Swimmer {
             id: object::new(ctx),
             name: string::utf8(name),
-            speed: 10,
-            style,
-            stamina: 100,
-            medals: 0,
+            species: string::utf8(species),
+            distance_traveled: 0,
         };
         
-        let swimmer_id = object::uid_to_address(&swimmer.id);
-        let creator = tx_context::sender(ctx);
-        
-        // 이벤트 발생
-        event::emit(SwimmerCreated {
-            swimmer_id,
-            name: swimmer.name,
-            creator,
-        });
-        
-        transfer::public_transfer(swimmer, creator);
+        transfer::public_transfer(swimmer, tx_context::sender(ctx));
     }
     
-    /// 훈련하여 능력치 향상
-    public entry fun train(swimmer: &mut Swimmer) {
-        swimmer.speed = swimmer.speed + 5;
-        swimmer.stamina = swimmer.stamina + 10;
-        
-        let swimmer_id = object::uid_to_address(&swimmer.id);
-        
-        // 이벤트 발생
-        event::emit(SwimmerTrained {
-            swimmer_id,
-            new_speed: swimmer.speed,
-            new_stamina: swimmer.stamina,
-        });
-    }
-    
-    /// 메달 획득
-    public entry fun award_medal(swimmer: &mut Swimmer) {
-        swimmer.medals = swimmer.medals + 1;
-    }
-    
-    /// 수영 스타일 변경
-    public entry fun change_style(swimmer: &mut Swimmer, new_style: u8) {
-        assert!(new_style < 4, EInvalidStyle);
-        swimmer.style = new_style;
+    /// Swimmer를 앞으로 이동시키기
+    public entry fun swim_forward(
+        swimmer: &mut Swimmer,
+        distance: u64,
+    ) {
+        swimmer.distance_traveled = swimmer.distance_traveled + distance;
     }
     
     /// Getter 함수들
@@ -172,20 +136,119 @@ export class ApiMoveCompiler {
         &swimmer.name
     }
     
-    public fun get_speed(swimmer: &Swimmer): u64 {
-        swimmer.speed
+    public fun get_distance(swimmer: &Swimmer): u64 {
+        swimmer.distance_traveled
+    }
+}`
+  }
+
+  /**
+   * swimmer.move 고급 템플릿 (시간 기반 진행, 아이템 등 포함)
+   * 학습이 진행된 후 사용할 수 있는 복잡한 버전
+   */
+  static getAdvancedSwimmerTemplate(): string {
+    return `module swimming::swimmer_advanced {
+    use sui::object::{Self, UID};
+    use sui::transfer;
+    use sui::tx_context::{Self, TxContext};
+    use sui::event;
+    use sui::clock::{Self, Clock};
+    use std::string::{Self, String};
+    
+    /// Constants
+    const BASE_SPEED_PER_HOUR: u64 = 100;
+    const TUNA_BONUS: u64 = 10;
+    
+    /// Swimmer NFT with time-based mechanics
+    public struct Swimmer has key, store {
+        id: UID,
+        name: String,
+        species: String,
+        distance_traveled: u64,
+        base_speed_per_hour: u64,
+        last_update_timestamp_ms: u64,
     }
     
-    public fun get_stamina(swimmer: &Swimmer): u64 {
-        swimmer.stamina
+    /// Tuna Can item for boosting
+    public struct TunaCan has key, store {
+        id: UID,
+        energy: u64,
     }
     
-    public fun get_style(swimmer: &Swimmer): u8 {
-        swimmer.style
+    /// Events
+    public struct SwimmerMinted has copy, drop {
+        swimmer_id: address,
+        owner: address,
+        name: String,
+        species: String,
     }
     
-    public fun get_medals(swimmer: &Swimmer): u64 {
-        swimmer.medals
+    /// Mint a new Swimmer NFT with time tracking
+    public entry fun mint_swimmer(
+        name: vector<u8>,
+        species: vector<u8>,
+        clock: &Clock,
+        ctx: &mut TxContext
+    ) {
+        let swimmer = Swimmer {
+            id: object::new(ctx),
+            name: string::utf8(name),
+            species: string::utf8(species),
+            distance_traveled: 0,
+            base_speed_per_hour: BASE_SPEED_PER_HOUR,
+            last_update_timestamp_ms: clock::timestamp_ms(clock),
+        };
+        
+        let swimmer_id = object::uid_to_address(&swimmer.id);
+        let owner = tx_context::sender(ctx);
+        
+        event::emit(SwimmerMinted {
+            swimmer_id,
+            owner,
+            name: swimmer.name,
+            species: swimmer.species,
+        });
+        
+        transfer::public_transfer(swimmer, owner);
+    }
+    
+    /// Update swimmer's progress based on elapsed time
+    public entry fun update_progress(
+        swimmer: &mut Swimmer,
+        clock: &Clock,
+    ) {
+        let current_time = clock::timestamp_ms(clock);
+        let time_elapsed_ms = current_time - swimmer.last_update_timestamp_ms;
+        let hours_elapsed = time_elapsed_ms / (1000 * 60 * 60);
+        
+        if (hours_elapsed > 0) {
+            let distance_gained = swimmer.base_speed_per_hour * hours_elapsed;
+            swimmer.distance_traveled = swimmer.distance_traveled + distance_gained;
+            swimmer.last_update_timestamp_ms = current_time;
+        }
+    }
+    
+    /// Mint a TunaCan item
+    public entry fun mint_tuna(ctx: &mut TxContext) {
+        let tuna = TunaCan {
+            id: object::new(ctx),
+            energy: TUNA_BONUS,
+        };
+        
+        transfer::public_transfer(tuna, tx_context::sender(ctx));
+    }
+    
+    /// Feed tuna to swimmer for instant boost
+    public entry fun eat_tuna(
+        swimmer: &mut Swimmer,
+        tuna: TunaCan,
+        clock: &Clock,
+    ) {
+        update_progress(swimmer, clock);
+        
+        let TunaCan { id, energy } = tuna;
+        swimmer.distance_traveled = swimmer.distance_traveled + energy;
+        object::delete(id);
     }
 }`
   }

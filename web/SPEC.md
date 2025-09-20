@@ -11,32 +11,35 @@
 - **Visual Feedback**: 작성한 코드가 수영 캐릭터의 능력치와 동작으로 시각화
 - **No Backend**: 서버 비용 없이 완전 탈중앙화 운영
 
-## 2. MVP 범위 정의 (3시간)
+## 2. MVP 범위 정의 (실제 구현)
 
-### 2.1 포함 기능
-- Move 코드 에디터 (템플릿 기반)
-- Sui 지갑 연동 (Sui Wallet, Suiet)
-- 미리 컴파일된 Move 모듈 배포
-- 수영 캐릭터 NFT 생성 및 조회
-- 간단한 수영장 UI (CSS 애니메이션)
-- 1개 레슨 (캐릭터 생성)
+### 2.1 구현 완료 기능
+- ✅ Move 코드 에디터 (Monaco Editor 기반)
+- ✅ Sui 지갑 연동 (@mysten/dapp-kit)
+- ✅ 템플릿 기반 Move 모듈 배포
+- ✅ 수영 캐릭터 NFT 생성 및 조회
+- ✅ 수영장 UI (SwimmingPool 컴포넌트)
+- ✅ Session 1, 2 (총 5개 레슨)
+- ✅ Gameplay Console 페이지
+- ✅ 아이템 시스템 (TunaCan)
+- ✅ 자동 전진 시스템
 
-### 2.2 제외 기능
-- Move 컴파일러 통합 (미리 컴파일된 바이트코드 사용)
-- 복잡한 게임 로직 (배틀, 토너먼트)
-- 백엔드 서버
-- 사용자 인증 시스템
-- 다중 레슨 시스템
+### 2.2 미구현 기능
+- ❌ 실제 Move 컴파일러 통합 (템플릿 사용 중)
+- ❌ 리더보드 시스템
+- ❌ 토너먼트 기능
+- ❌ 백엔드 서버
+- ❌ 사용자 인증 시스템
 
 ## 3. 기술 스택 결정
 
-### 3.1 프론트엔드: React + TypeScript 선택
+### 3.1 프론트엔드: Next.js + TypeScript (실제 구현)
 
-**선택 근거:**
-- Sui SDK(@mysten/sui.js) 네이티브 지원
-- 지갑 연동 라이브러리 생태계 성숙
-- HMR로 빠른 개발 반복
-- 3시간 내 개발 가능성 검증됨
+**구현 내역:**
+- Next.js 15로 마이그레이션 완료
+- @mysten/dapp-kit 통합
+- Monaco Editor 코드 에디터 통합
+- Tailwind CSS + Glassmorphism 디자인
 
 ### 3.2 블록체인: Sui Testnet
 
@@ -47,10 +50,11 @@
 
 ### 3.3 스마트 컨트랙트: Move
 
-**구현 방식:**
-- 개발자가 로컬에서 Move 모듈 미리 컴파일
-- 바이트코드를 프론트엔드에 base64로 임베딩
-- 사용자는 파라미터만 수정하여 배포
+**실제 구현:**
+- 템플릿 기반 배포 시스템 (moveTemplates.ts)
+- 브라우저 컴파일러 시도 (js-move-playground - 미작동)
+- 서버 API 컴파일 (/api/compile)
+- 수동 CLI 배포 후 패키지 ID 사용
 
 ## 4. 아키텍처 설계
 
@@ -68,20 +72,39 @@
 
 ## 5. Move 모듈 설계
 
-### 5.1 Swimmer NFT 구조
-```
-- id: 고유 식별자
-- name: 수영 선수 이름
-- speed: 수영 속도 (10-100)
-- style: 수영 스타일 (0: 자유형, 1: 배영, 2: 평영, 3: 접영)
-- stamina: 체력 (50-100)
-- medals: 획득 메달 수
+### 5.1 실제 구현된 구조 (moveTemplates.ts)
+
+#### Swimmer NFT 구조
+```move
+public struct Swimmer has key, store {
+    id: UID,
+    owner: address,
+    name: String,
+    species: String,  // 종류
+    distance_traveled: u64,  // 이동 거리
+    base_speed_per_hour: u64,  // 시간당 속도
+    last_update_timestamp_ms: u64,  // 마지막 업데이트 시간
+}
 ```
 
-### 5.2 핵심 함수
-- `create_swimmer`: 새 수영 선수 생성
-- `train`: 능력치 향상
-- `get_stats`: 현재 상태 조회
+#### TunaCan 아이템
+```move
+public struct TunaCan has key, store {
+    id: UID,
+    energy: u64,  // 보너스 거리
+}
+```
+
+### 5.2 구현된 핵심 함수
+- `mint_swimmer`: 새 수영 선수 NFT 민팅
+- `update_progress`: 자동 전진 (시간 기반)
+- `mint_tuna`: 참치 아이템 생성
+- `eat_tuna`: 참치 소비로 거리 보너스
+
+### 5.3 문제점
+- **구버전 코드** (`swimmer.move`): speed, style, stamina 구조
+- **신버전 코드** (`moveTemplates.ts`): distance_traveled 구조
+- **불일치 해결 필요**
 
 ## 6. UI/UX 설계
 
@@ -140,18 +163,21 @@
 - UI 구현 지연: 최소 기능 UI로 단순화
 - 디버깅 시간 초과: 에러 처리 최소화, 로깅 강화
 
-## 9. 성공 지표
+## 9. 성공 지표 (달성 현황)
 
 ### 9.1 MVP 성공 기준
-- [ ] 사용자가 지갑을 연결할 수 있음
-- [ ] 템플릿 코드를 수정할 수 있음
-- [ ] 수정한 코드로 NFT를 배포할 수 있음
-- [ ] 배포된 NFT가 UI에 표시됨
+- [x] 사용자가 지갑을 연결할 수 있음 ✅
+- [x] 템플릿 코드를 수정할 수 있음 ✅
+- [x] 수정한 코드로 NFT를 배포할 수 있음 ✅
+- [x] 배포된 NFT가 UI에 표시됨 ✅
+- [x] 레슨 시스템 구현 ✅
+- [x] 아이템 시스템 구현 ✅
 
 ### 9.2 사용자 경험 지표
-- 지갑 연결부터 NFT 생성까지: 2분 이내
-- 첫 페이지 로드: 3초 이내
-- 에러 발생률: 10% 미만
+- 지갑 연결부터 NFT 생성까지: 2분 이내 ✅
+- 첫 페이지 로드: 3초 이내 ✅
+- 자동 전진 시스템 작동 ✅
+- Gameplay Console 구현 ✅
 
 ## 10. 향후 확장 계획
 

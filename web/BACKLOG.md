@@ -7,109 +7,62 @@ Sui 블록체인 기반 수영 게임 교육 플랫폼 - Move 언어를 게임�
 
 ### ✅ DONE
 - [x] **BACKLOG-001**: BACKLOG.md 태스크 관리 시스템 구축
-- [x] **ENV-001**: React + TypeScript 프로젝트 초기화
+- [x] **ENV-001**: React + TypeScript 프로젝트 초기화 (Next.js로 마이그레이션 완료)
 - [x] **ENV-002**: 필수 라이브러리 설치
 - [x] **ENV-003**: 프로젝트 구조 설정
-- [x] **MOVE-001**: Swimmer NFT 모듈 작성
-- [x] **CORE-001**: Sui 지갑 연동 구현
-- [x] **CORE-002**: 코드 에디터 컴포넌트
+- [x] **ENV-004**: Next.js App Router 마이그레이션 🆕
+- [x] **MOVE-001**: Swimmer NFT 모듈 작성 (lession1.ts 버전) 🆕
+- [x] **CORE-001**: Sui 지갑 연동 구현 (@mysten/dapp-kit)
+- [x] **CORE-002**: 코드 에디터 컴포넌트 (Monaco Editor 통합)
+- [x] **CORE-003**: 블록체인 배포 서비스 (부분 구현)
+- [x] **CORE-004**: NFT 조회 서비스 (getUserSwimmers, getUserTunaCans)
+- [x] **CORE-005**: localStorage 패키지 ID 관리 🆕
 - [x] **UI-001**: 레이아웃 컴포넌트
-- [x] **UI-002**: 수영장 시각화 컴포넌트
+- [x] **UI-002**: 수영장 시각화 컴포넌트 (SwimmingPool)
 - [x] **UI-003**: 수영 캐릭터 컴포넌트
 - [x] **UI-004**: 상태 표시 UI
+- [x] **UI-005**: LearningLayout 레이아웃 시스템 🆕
+- [x] **UI-006**: 사이드바 네비게이션 🆕
+- [x] **UI-007**: QuickGuide 컴포넌트 🆕
+- [x] **UI-008**: LearningState 컴포넌트 🆕
 - [x] **LESSON-001**: 레슨 1 - "첫 번째 수영 선수 만들기"
+- [x] **LESSON-002**: Session 1 전체 레슨 구조화 (3개 레슨)
+- [x] **LESSON-003**: Session 2 PTB 레슨 구조화 (2개 레슨)
+- [x] **LESSON-004**: 레슨 시스템 재구조화 (lib/lession) 🆕
+- [x] **GAMEPLAY-001**: Gameplay Console 페이지 구현
+- [x] **ITEM-001**: TunaCan 아이템 시스템 구현
+- [x] **AUTO-001**: 자동 전진 시스템 (update_progress)
+- [x] **DOC-001**: IMPLEMENTATION_STATUS.md 작성
+- [x] **DOC-002**: IMPLEMENTATION_STATUS.md 업데이트 (17:30) 🆕
+- [x] **FIX-002**: 브라우저 Move 컴파일러 수정 (19:45) 🆕
 
 ### 🚧 IN_PROGRESS
 
 ### 📋 TODO
 
-#### Phase 1: 환경 설정 (30분)
-- [ ] **ENV-001**: React + TypeScript 프로젝트 초기화
-  - Vite 사용하여 빠른 개발 환경 구축
-  - TypeScript 설정
-  - ESLint/Prettier 설정
+#### 🔴 긴급 수정 필요
+- [ ] **FIX-001**: Move 코드 통일
+  - swimmer.move와 moveTemplates.ts 구조 일치시키기
+  - 실제 사용할 버전 결정
+  - 문서 업데이트
   
-- [ ] **ENV-002**: 필수 라이브러리 설치
-  - @mysten/sui.js (Sui SDK)
-  - @mysten/wallet-standard
-  - @suiet/wallet-kit (지갑 연동)
-  - @monaco-editor/react (코드 에디터)
-  - tailwindcss (스타일링)
-  
-- [ ] **ENV-003**: 프로젝트 구조 설정
-  ```
-  src/
-    components/     # UI 컴포넌트
-    contracts/      # Move 바이트코드
-    hooks/          # React 커스텀 훅
-    services/       # Sui 블록체인 서비스
-    utils/          # 유틸리티 함수
-    types/          # TypeScript 타입 정의
-  ```
 
-#### Phase 2: Move 스마트 컨트랙트 (30분)
-- [ ] **MOVE-001**: Swimmer NFT 모듈 작성
-  - NFT 구조체 정의 (id, name, speed, style, stamina, medals)
-  - create_swimmer 함수
-  - train 함수
-  - get_stats 함수
-  
-- [ ] **MOVE-002**: Move 모듈 컴파일 및 바이트코드 추출
-  - Sui CLI로 testnet 용 컴파일
-  - Base64 인코딩
-  - 프론트엔드에 임베딩
+#### 🟡 주요 기능 구현
+- [ ] **FEATURE-001**: 리더보드 시스템
+  - 공유 레지스트리 스마트 컨트랙트 작성
+  - 순위 계산 로직
+  - UI 컴포넌트 개발
+  - 실시간 업데이트
 
-#### Phase 3: 핵심 기능 구현 (90분)
-- [ ] **CORE-001**: Sui 지갑 연동 구현
-  - WalletProvider 설정
-  - 연결/해제 UI
-  - 지갑 상태 관리
-  - 멀티 지갑 지원 (Sui Wallet, Suiet)
-  
-- [ ] **CORE-002**: 코드 에디터 컴포넌트
-  - Monaco Editor 통합
-  - Move 문법 하이라이팅
-  - 템플릿 코드 로딩
-  - 파라미터 추출 로직
-  
-- [ ] **CORE-003**: 블록체인 배포 서비스
-  - 바이트코드 배포 함수
-  - 트랜잭션 빌더
-  - 가스 추정
-  - 에러 처리
-  
-- [ ] **CORE-004**: NFT 조회 서비스
-  - 사용자 NFT 목록 조회
-  - NFT 상태 읽기
-  - 실시간 업데이트 (이벤트 구독)
+- [ ] **FEATURE-002**: Move 컴파일러 개선
+  - WebAssembly 기반 컴파일러 조사
+  - 서버 API 안정화
+  - 에러 처리 강화
 
-#### Phase 4: UI/UX 구현 (60분)
-- [ ] **UI-001**: 레이아웃 컴포넌트
-  - 3-column 레이아웃 (설명/에디터/수영장)
-  - 반응형 디자인
-  - 다크/라이트 모드
-  
-- [ ] **UI-002**: 수영장 시각화 컴포넌트
-  - 수영장 배경 CSS
-  - 레인 표시
-  - 물결 애니메이션
-  
-- [ ] **UI-003**: 수영 캐릭터 컴포넌트
-  - SVG/CSS 캐릭터
-  - 수영 스타일별 애니메이션 (자유형/배영/평영/접영)
-  - 속도에 따른 애니메이션 속도 조절
-  
-- [ ] **UI-004**: 상태 표시 UI
-  - 능력치 바 (speed, stamina)
-  - 메달 카운트
-  - 트랜잭션 상태 토스트
-
-#### Phase 5: 레슨 시스템 (30분)
-- [ ] **LESSON-001**: 레슨 1 - "첫 번째 수영 선수 만들기"
-  - 설명 콘텐츠 작성
-  - 템플릿 코드 준비
-  - 성공 조건 검증
-  - 완료 시 축하 메시지
+- [ ] **FEATURE-003**: Session 3+ 레슨 개발
+  - 고급 Move 개념 설명
+  - PTB 심화 학습
+  - DeFi 기초 개념
 
 #### Phase 6: 테스트 및 배포 (30분)
 - [ ] **TEST-001**: 단위 테스트
@@ -163,16 +116,41 @@ Sui 블록체인 기반 수영 게임 교육 플랫폼 - Move 언어를 게임�
 4. 문서화 동시 진행
 
 ## 진행 상황 추적
-- 전체 태스크: 37개
-- 완료: 12개
+- 전체 태스크: 41개
+- 완료: 29개 (DONE 섹션)
 - 진행중: 0개
-- 대기: 25개
-- 진행률: 32%
+- 대기: 12개 (TODO + BACKLOG)
+- 진행률: 71%
+
+### 최근 완료 (2025-09-20 19:45) 🆕
+- Next.js App Router 완전 마이그레이션
+- LearningLayout 레이아웃 시스템
+- 사이드바 네비게이션 구현
+- 레슨 시스템 재구조화 (lib/lession)
+- localStorage 패키지 ID 관리
+- QuickGuide, LearningState 컴포넌트 추가
+- **Move 컴파일러 완전 수정**: 서버 API를 통한 실제 컴파일 구현
+
+### 이전 완료 (2025-09-20)
+- Gameplay Console 페이지 구현
+- TunaCan 아이템 시스템
+- 자동 전진 시스템
+- Session 1, 2 레슨 구조화
+- 구현 현황 문서 작성
 
 ## 리스크 및 이슈
-- RPC 노드 불안정성 → 멀티 엔드포인트 준비
-- 지갑 호환성 → 다중 지갑 라이브러리 사용
-- Move 컴파일 복잡성 → 사전 컴파일된 바이트코드 사용
+
+### 해결된 이슈
+- ✅ 지갑 호환성 → @mysten/dapp-kit으로 해결
+- ✅ 프로젝트 구조 → Next.js 마이그레이션 완료
+
+### 현재 이인슈 (업데이트: 19:45)
+- 🟡 **Move 코드 불일치**: swimmer.move vs lession1.ts (부분 해결)
+- 🟢 **브라우저 컴파일러 작동**: ✅ 해결됨!
+- 🟡 **리더보드 미구현**: 공유 레지스트리 부재
+- 🟡 **배포 프로세스**: 수동 CLI 배포 필요
+- 🟢 **App Router 마이그레이션**: ✅ 완료
+- 🟢 **Move 컴파일 시스템**: ✅ 완료
 
 ## 참고 링크
 - [Sui 공식 문서](https://docs.sui.io)

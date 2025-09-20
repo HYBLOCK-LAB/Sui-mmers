@@ -4,6 +4,7 @@ import type { editor as MonacoEditor } from 'monaco-editor';
 import { DEFAULT_VALUES } from '@/src/contracts/moveTemplates';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { ApiMoveCompiler } from '@/lib/services/apiMoveCompiler';
 
 const Editor = dynamic(() => import('@monaco-editor/react'), {
   ssr: false,
@@ -21,10 +22,12 @@ const DiffEditor = dynamic(() => import('@monaco-editor/react').then((mod) => mo
 
 interface CodeEditorProps {
   onMint?: (name: string, species: string) => void | Promise<void>;
+  onCompileAndDeploy?: (transaction: any) => void | Promise<void>;
   disabled?: boolean;
   codeTemplate?: string;
   codeSkeletone?: string;
   readOnly?: boolean;
+  senderAddress?: string;
 }
 
 const FALLBACK_TEMPLATE = `module sui_mmers::example {
@@ -44,7 +47,7 @@ const normalize = (input: string): string =>
     .join('\n')
     .trim();
 
-export function CodeEditor({ onMint, disabled, codeTemplate, codeSkeletone, readOnly = false }: CodeEditorProps) {
+export function CodeEditor({ onMint, onCompileAndDeploy, disabled, codeTemplate, codeSkeletone, readOnly = false, senderAddress }: CodeEditorProps) {
   const [isDeploying, setIsDeploying] = useState(false);
   const [name] = useState('My Swimmer');
   const [species] = useState('Pacific Orca');
@@ -143,13 +146,23 @@ export function CodeEditor({ onMint, disabled, codeTemplate, codeSkeletone, read
   };
 
   const handleDeploy = async () => {
-    if (!onMint) return;
     setIsDeploying(true);
     try {
-      await onMint(name, species);
+      // If onCompileAndDeploy is provided, use compilation flow
+      if (onCompileAndDeploy && senderAddress) {
+        console.log('Compiling Move code with sender:', senderAddress);
+        const currentCode = editorRef.current?.getValue() || solutionCode;
+        const transaction = await ApiMoveCompiler.createDeployTransaction('swimmer', currentCode, senderAddress);
+        await onCompileAndDeploy(transaction);
+      } else if (onCompileAndDeploy) {
+        throw new Error('Sender address is required for deployment');
+      } 
+      // Fallback to old mint flow
+      else if (onMint) {
+        await onMint(name, species);
+      }
     } catch (error) {
       console.error('Deploy failed:', error);
-      alert('Deployment failed: ' + (error as Error).message);
     } finally {
       setIsDeploying(false);
     }
@@ -302,10 +315,12 @@ export function CodeEditor({ onMint, disabled, codeTemplate, codeSkeletone, read
           </div>
         </CardFooter>
       ) : (
-        onMint && (
+        (onMint || onCompileAndDeploy) && (
           <CardFooter className="justify-end">
             <Button onClick={handleDeploy} disabled={disabled || isDeploying} size="lg" className="w-full">
-              {isDeploying ? 'Processing...' : 'Mint Swimmer from Template'}
+              {isDeploying ? 'Processing...' : 
+               onCompileAndDeploy ? 'Compile & Deploy Swimmer' : 
+               'Mint Swimmer from Template'}
             </Button>
           </CardFooter>
         )
