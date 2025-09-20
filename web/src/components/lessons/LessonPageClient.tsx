@@ -16,9 +16,14 @@ interface LessonPageClientProps {
   chapterSummary: string;
   markdown: string;
   codeTemplate?: string;
+  codeSkeletone?: string;
+  readOnly?: boolean;
   nextLessonSlug?: string;
   nextChapterSlug?: string;
   nextChapterTitle?: string;
+  previousLessonSlug?: string;
+  previousChapterSlug?: string;
+  previousChapterTitle?: string;
 }
 
 export function LessonPageClient({
@@ -29,9 +34,14 @@ export function LessonPageClient({
   chapterSummary,
   markdown,
   codeTemplate,
+  codeSkeletone,
+  readOnly,
   nextLessonSlug,
   nextChapterSlug,
   nextChapterTitle,
+  previousLessonSlug,
+  previousChapterSlug,
+  previousChapterTitle,
 }: LessonPageClientProps) {
   const { setActive } = useLessonNavigation();
 
@@ -41,6 +51,10 @@ export function LessonPageClient({
   }, [lessonSlug, chapterSlug, setActive]);
 
   const nextHref = nextLessonSlug && nextChapterSlug ? getLessonRoute(nextLessonSlug, nextChapterSlug) : null;
+  const previousHref =
+    previousLessonSlug && previousChapterSlug ? getLessonRoute(previousLessonSlug, previousChapterSlug) : null;
+
+  const showEditor = Boolean(codeTemplate);
 
   return (
     <div className="space-y-10">
@@ -50,27 +64,35 @@ export function LessonPageClient({
         <p className="text-sm text-gray-600">{chapterSummary}</p>
       </div>
 
-      {codeTemplate ? (
+      {showEditor ? (
         <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
           <LessonDescription markdown={markdown} className="h-full" />
-          <CodeEditor codeTemplate={codeTemplate} />
+          <CodeEditor codeTemplate={codeTemplate} codeSkeletone={codeSkeletone} readOnly={readOnly} />
         </div>
       ) : (
         <LessonDescription markdown={markdown} />
       )}
 
       <div className="flex items-center justify-between border-t border-gray-200 pt-6">
-        <Button variant="ghost" asChild>
+        {/* <Button variant="ghost" asChild>
           <Link href="/lessons">All lessons</Link>
+        </Button> */}
+        {previousHref ? (
+          <Button asChild>
+            <Link href={previousHref}>Previous: {previousChapterTitle ?? 'Continue'} </Link>
+          </Button>
+        ) : (
+          <div />
+        )}
+        <Button asChild variant="secondary">
+          <Link href="/gameplay">Head to the gameplay console</Link>
         </Button>
         {nextHref ? (
           <Button asChild>
             <Link href={nextHref}>Next: {nextChapterTitle ?? 'Continue'} </Link>
           </Button>
         ) : (
-          <Button asChild variant="secondary">
-            <Link href="/gameplay">Head to the gameplay console</Link>
-          </Button>
+          <div />
         )}
       </div>
     </div>
