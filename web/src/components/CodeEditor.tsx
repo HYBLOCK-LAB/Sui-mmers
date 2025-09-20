@@ -27,6 +27,7 @@ interface CodeEditorProps {
   codeTemplate?: string;
   codeSkeletone?: string;
   readOnly?: boolean;
+  senderAddress?: string;
 }
 
 const FALLBACK_TEMPLATE = `module sui_mmers::example {
@@ -46,7 +47,7 @@ const normalize = (input: string): string =>
     .join('\n')
     .trim();
 
-export function CodeEditor({ onMint, onCompileAndDeploy, disabled, codeTemplate, codeSkeletone, readOnly = false }: CodeEditorProps) {
+export function CodeEditor({ onMint, onCompileAndDeploy, disabled, codeTemplate, codeSkeletone, readOnly = false, senderAddress }: CodeEditorProps) {
   const [isDeploying, setIsDeploying] = useState(false);
   const [name] = useState('My Swimmer');
   const [species] = useState('Pacific Orca');
@@ -148,11 +149,13 @@ export function CodeEditor({ onMint, onCompileAndDeploy, disabled, codeTemplate,
     setIsDeploying(true);
     try {
       // If onCompileAndDeploy is provided, use compilation flow
-      if (onCompileAndDeploy) {
-        console.log('Compiling Move code...');
+      if (onCompileAndDeploy && senderAddress) {
+        console.log('Compiling Move code with sender:', senderAddress);
         const currentCode = editorRef.current?.getValue() || solutionCode;
-        const transaction = await ApiMoveCompiler.createDeployTransaction('swimmer', currentCode);
+        const transaction = await ApiMoveCompiler.createDeployTransaction('swimmer', currentCode, senderAddress);
         await onCompileAndDeploy(transaction);
+      } else if (onCompileAndDeploy) {
+        throw new Error('Sender address is required for deployment');
       } 
       // Fallback to old mint flow
       else if (onMint) {
@@ -160,7 +163,6 @@ export function CodeEditor({ onMint, onCompileAndDeploy, disabled, codeTemplate,
       }
     } catch (error) {
       console.error('Deploy failed:', error);
-      alert('Deployment failed: ' + (error as Error).message);
     } finally {
       setIsDeploying(false);
     }

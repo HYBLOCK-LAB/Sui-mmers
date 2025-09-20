@@ -43,7 +43,8 @@ export class ApiMoveCompiler {
    */
   static async createDeployTransaction(
     moduleName: string,
-    sourceCode: string
+    sourceCode: string,
+    senderAddress: string
   ): Promise<Transaction> {
     // API를 통해 Move 코드 컴파일
     const { bytecode, dependencies } = await this.compileMove(moduleName, sourceCode)
@@ -51,14 +52,37 @@ export class ApiMoveCompiler {
     // Transaction 생성
     const tx = new Transaction()
     
+    // 가스 예산 설정 (디버깅용 큰 값)
+    tx.setGasBudget(100000000)
+    
+    // sender 주소 검증
+    if (!senderAddress) {
+      throw new Error('Sender address is required for deployment')
+    }
+    console.log('Deploying with sender:', senderAddress)
+    
     // Base64를 Uint8Array로 변환
     const bytecodeBytes = fromBase64(bytecode)
+    console.log('Bytecode length:', bytecodeBytes.length)
+    console.log('Dependencies:', dependencies)
     
-    // 패키지 배포
-    // Sui SDK v1+에서는 publish가 자동으로 UpgradeCap을 sender에게 전송
-    tx.publish({
+    // 패키지 배포 - SDK 공식 문서에 따라 배열로 반환됨
+    const [upgradeCap] = tx.publish({
       modules: [bytecodeBytes],
       dependencies: dependencies,
+    })
+    
+    // UpgradeCap을 sender에게 명시적으로 전송 (필수)
+    // SDK 문서: "you must explicitly transfer the UpgradeCap object"
+    // tx.pure.address() 사용하여 주소 타입 명시
+    tx.transferObjects([upgradeCap], tx.pure.address(senderAddress))
+    
+    // 디버깅: 트랜잭션 상세 정보 출력
+    console.log('Transaction built with sender:', senderAddress)
+    console.log('Transaction details:', {
+      sender: senderAddress,
+      upgradeCap: upgradeCap,
+      commands: tx.blockData.transactions
     })
     
     return tx

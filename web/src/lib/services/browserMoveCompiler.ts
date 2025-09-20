@@ -74,7 +74,8 @@ export class BrowserMoveCompiler {
    */
   static async createDeployTransaction(
     moduleName: string,
-    sourceCode: string
+    sourceCode: string,
+    senderAddress?: string
   ): Promise<Transaction> {
     // Move 코드를 서버에서 컴파일
     const { bytecode, dependencies } = await this.compileMove(moduleName, sourceCode)
@@ -87,7 +88,8 @@ export class BrowserMoveCompiler {
     
     console.log('Creating deploy transaction:', {
       bytecodeSize: bytecodeBytes.length,
-      dependencies: dependencies
+      dependencies: dependencies,
+      senderAddress: senderAddress
     })
     
     // 패키지 배포
@@ -96,10 +98,17 @@ export class BrowserMoveCompiler {
       dependencies: dependencies,
     })
     
-    // UpgradeCap 전송
+    // UpgradeCap 전송 - sender address가 있으면 사용, 없으면 tx.gas 사용
     if (result) {
       const upgradeCap = Array.isArray(result) ? result[0] : result
-      tx.transferObjects([upgradeCap], tx.gas)
+      if (senderAddress) {
+        // tx.pure.address() 사용하여 주소 타입 명시
+        tx.transferObjects([upgradeCap], tx.pure.address(senderAddress))
+      } else {
+        // fallback to tx.gas (should not be used)
+        console.warn('No sender address provided, using tx.gas (this may fail)')
+        tx.transferObjects([upgradeCap], tx.gas)
+      }
     }
     
     return tx

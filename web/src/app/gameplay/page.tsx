@@ -213,6 +213,17 @@ function GameplayContent() {
     }
   }, [isMockMode, fetchSwimmers, fetchTunaCans]);
 
+  // Load package ID from localStorage on mount
+  useEffect(() => {
+    if (!isMockMode && typeof window !== 'undefined') {
+      const savedPackageId = window.localStorage.getItem('smr-package-id');
+      if (savedPackageId) {
+        console.log('Loaded package ID from localStorage:', savedPackageId);
+        setPackageId(savedPackageId);
+      }
+    }
+  }, [isMockMode]);
+
   const handleCompileAndDeploy = async (transaction: any) => {
     if (isMockMode) {
       console.log('🎭 Mock 모드: 컴파일 및 배포는 지원되지 않습니다');
@@ -228,16 +239,63 @@ function GameplayContent() {
     setIsLoading(true);
     try {
       signAndExecute(
-        { transaction },
+        { 
+          transaction,
+          options: {
+            showObjectChanges: true,  // Enable object changes to get package details
+            showEffects: true,
+          }
+        },
         {
           onSuccess: (result) => {
-            console.log('Transaction successful:', result);
-            const deployedPackageId = result.effects?.created?.[0]?.reference?.objectId;
+            console.log('Transaction successful with full result:', result);
+            console.log('ObjectChanges:', result.objectChanges);
+            console.log('Effects:', result.effects);
+            
+            // Extract package ID from objectChanges for published packages
+            let deployedPackageId = null;
+            if (result.objectChanges) {
+              console.log('Checking objectChanges array of length:', result.objectChanges.length);
+              for (const change of result.objectChanges) {
+                console.log('Change type:', change.type, 'Change:', change);
+                if (change.type === 'published') {
+                  deployedPackageId = change.packageId;
+                  console.log('Found deployed package ID from objectChanges:', deployedPackageId);
+                  break;
+                }
+              }
+            }
+            
+            // If objectChanges didn't work, try to extract from effects
+            if (!deployedPackageId && result.effects) {
+              // Check for created objects (package will be in created)
+              if (result.effects.created) {
+                for (const obj of result.effects.created) {
+                  console.log('Created object:', obj);
+                  // Package objects have a specific pattern
+                  if (obj.owner && typeof obj.owner === 'object' && 'Immutable' in obj.owner) {
+                    deployedPackageId = obj.reference.objectId;
+                    console.log('Found package ID from effects.created:', deployedPackageId);
+                    break;
+                  }
+                }
+              }
+            }
+            
             if (deployedPackageId) {
               handlePackageDeployed(deployedPackageId);
               alert(`🚀 패키지가 성공적으로 배포되었습니다!\n\nPackage ID: ${deployedPackageId}`);
             } else {
-              alert('🎉 트랜잭션이 성공했습니다!');
+              // Fallback to old method if objectChanges is not available
+              const fallbackId = result.effects?.created?.[0]?.reference?.objectId;
+              if (fallbackId) {
+                console.log('Using fallback package ID:', fallbackId);
+                handlePackageDeployed(fallbackId);
+                alert(`🚀 패키지가 성공적으로 배포되었습니다!\n\nPackage ID: ${fallbackId}`);
+              } else {
+                console.log('Could not extract package ID from transaction result');
+                alert('🎉 트랜잭션이 성공했습니다!');
+              }
             }
             fetchSwimmers();
           },
@@ -668,6 +726,7 @@ function GameplayContent() {
               onMint={handleMintFromTemplate}
               disabled={!currentAccount || isLoading}
               codeTemplate={ApiMoveCompiler.getSwimmerMoveTemplate()}
+              senderAddress={currentAccount?.address}
             />
           </section>
         )}
