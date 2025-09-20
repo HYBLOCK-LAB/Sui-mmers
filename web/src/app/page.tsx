@@ -14,17 +14,16 @@ export default function Home() {
               <Button asChild size="lg" className="shadow-md">
                 <Link href="/lessons">Let's start</Link>
               </Button>
+              <Button asChild size="lg" className="shadow-md">
+                <Link href="/gameplay">Playgroud</Link>
+              </Button>
             </div>
           </div>
         </div>
 
         {/* 오른쪽 로고 - 크게 표시 */}
         <div className="absolute right-[185px] top-[400px] transform -translate-y-1/2">
-          <img
-            src="/sui-mmers-logo.png"
-            alt="Sui-mmers Logo"
-            className="h-[70vh] w-auto object-contain"
-          />
+          <img src="/sui-mmers-logo.png" alt="Sui-mmers Logo" className="h-[70vh] w-auto object-contain" />
         </div>
       </main>
       <footer className="bg-white/80 backdrop-blur-sm border-t border-gray-200">
