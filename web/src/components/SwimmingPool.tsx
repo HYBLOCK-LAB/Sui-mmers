@@ -1,25 +1,25 @@
-import { useMemo, useState, useRef, useEffect } from 'react'
-import { SwimmerSummary, TunaCanItem } from '@/lib/types/swimmer'
+import { useMemo, useState, useRef, useEffect } from 'react';
+import { SwimmerSummary, TunaCanItem } from '@/lib/types/swimmer';
 
 interface SwimmingPoolProps {
-  swimmers: SwimmerSummary[]
-  tunaCans?: TunaCanItem[]
-  selectedSwimmerId?: string
-  selectedTunaId?: string
-  onSwimmerSelect?: (id: string) => void
-  onTunaSelect?: (id: string) => void
-  onUpdateProgress?: () => void
-  onMintTuna?: () => void
-  onEatTuna?: () => void
-  actionLoading?: string | null
-  packageId?: string | null
-  currentAccount?: any
+  swimmers: SwimmerSummary[];
+  tunaCans?: TunaCanItem[];
+  selectedSwimmerId?: string;
+  selectedTunaId?: string;
+  onSwimmerSelect?: (id: string) => void;
+  onTunaSelect?: (id: string) => void;
+  onUpdateProgress?: () => void;
+  onMintTuna?: () => void;
+  onEatTuna?: () => void;
+  actionLoading?: string | null;
+  packageId?: string | null;
+  currentAccount?: any;
 }
 
-export function SwimmingPool({ 
-  swimmers, 
-  tunaCans = [], 
-  selectedSwimmerId = '', 
+export function SwimmingPool({
+  swimmers,
+  tunaCans = [],
+  selectedSwimmerId = '',
   selectedTunaId = '',
   onSwimmerSelect,
   onTunaSelect,
@@ -28,62 +28,65 @@ export function SwimmingPool({
   onEatTuna,
   actionLoading,
   packageId,
-  currentAccount
+  currentAccount,
 }: SwimmingPoolProps) {
-  const [colorPickerOpen, setColorPickerOpen] = useState(false)
-  const [selectedColor, setSelectedColor] = useState({ r: 255, g: 0, b: 0 })
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const originalImageRef = useRef<HTMLImageElement | null>(null)
-  const [recoloredImages, setRecoloredImages] = useState<Map<string, string>>(new Map())
-  
-  // 애니메이션 상태
-  const [animationFrame, setAnimationFrame] = useState(0)
-  const animationRef = useRef<NodeJS.Timeout | null>(null)
-  
-  // 애니메이션 프레임 시퀀스: 1-2-3-2-1-2-3-2-...
-  const animationSequence = [1, 2, 3, 2]
-  
-  // 현재 애니메이션 프레임 가져오기
+  const [selectedColor, setSelectedColor] = useState({ r: 255, g: 0, b: 0 });
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const originalImageRef = useRef<HTMLImageElement | null>(null);
+  const [recoloredImages, setRecoloredImages] = useState<Map<string, string>>(new Map());
+
+  const [animationFrame, setAnimationFrame] = useState(0);
+  const animationRef = useRef<NodeJS.Timeout | null>(null);
+
+  const animationSequence = [1, 2, 3, 2];
+
   const getCurrentFrame = () => {
-    return animationSequence[animationFrame % animationSequence.length]
-  }
-  
-  // // 방향에 따른 이미지 경로 생성
+    return animationSequence[animationFrame % animationSequence.length];
+  };
+
+  // // helper for alternative sprite assets based on direction
   // const getSwimmerImagePath = (frame: number, direction: 'right' | 'left' = 'right') => {
   //   if (direction === 'left') {
   //     return `/images/mint_water_flipped(${frame}).png`
   //   }
   //   return `/images/mint_water(${frame}).png`
   // }
-  const getSwimmerImagePath = (frame:number) => `/images/mint_water(${frame}).png`
-  
-  // // 수영 선수의 이동 방향 감지 (단순화된 버전)
+  const getSwimmerImagePath = (frame: number) => `/images/mint_water(${frame}).png`;
+
   // const getSwimmerDirection = (swimmer: SwimmerSummary, index: number): 'right' | 'left' => {
-  //   // 실제로는 이전 위치와 현재 위치를 비교해서 방향을 결정해야 하지만
-  //   // 간단하게 인덱스에 따라 방향을 번갈아 설정
+  //   // simple strategy: alternate directions by index
   //   return index % 2 === 0 ? 'right' : 'left'
   // }
 
-  // 이미지 색상 변경 함수들
   const rgbToHsl = (r: number, g: number, b: number) => {
-    r /= 255, g /= 255, b /= 255;
-    let max = Math.max(r, g, b), min = Math.min(r, g, b);
-    let h: number, s: number, l = (max + min) / 2;
+    (r /= 255), (g /= 255), (b /= 255);
+    let max = Math.max(r, g, b),
+      min = Math.min(r, g, b);
+    let h: number,
+      s: number,
+      l = (max + min) / 2;
     if (max === min) {
       h = s = 0;
     } else {
       let d = max - min;
       s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
       switch (max) {
-        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-        case g: h = (b - r) / d + 2; break;
-        case b: h = (r - g) / d + 4; break;
-        default: h = 0;
+        case r:
+          h = (g - b) / d + (g < b ? 6 : 0);
+          break;
+        case g:
+          h = (b - r) / d + 2;
+          break;
+        case b:
+          h = (r - g) / d + 4;
+          break;
+        default:
+          h = 0;
       }
       h /= 6;
     }
     return [h * 360, s, l];
-  }
+  };
 
   const hslToRgb = (h: number, s: number, l: number) => {
     let r: number, g: number, b: number;
@@ -106,30 +109,31 @@ export function SwimmingPool({
       b = hue2rgb(p, q, h - 1 / 3);
     }
     return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
-  }
+  };
 
   const recolorImageByHue = (image: HTMLImageElement, newHue: number) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return null;
-    
+
     canvas.width = image.width;
     canvas.height = image.height;
 
-    // 1. 캔버스에 원본 이미지 그리기
+    // Define the hue range for the original suit color (example: red hues)
+    const sourceHueMin = 340; // adjust as needed for your sprite's original color
+    const sourceHueMax = 20; // adjust as needed for your sprite's original color
+
+    // 1. Draw the original sprite onto the canvas
     ctx.drawImage(image, 0, 0);
 
-    // 2. 픽셀 데이터 가져오기
+    // 2. Read the pixel data into memory
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const data = imageData.data;
 
-    // 3. 사용자가 지정한 원본 색상 Hue 범위 (파란색/하늘색 범위)
-    const sourceHueMin = 180; // 하늘색
-    const sourceHueMax = 220; // 파란색
+    // 3. Find pixels whose hue matches the original suit color range
 
-    // 4. 모든 픽셀을 순회하며 조건 확인 및 변경
+    // 4. Shift those pixel hues to the new value and rebuild the color
     for (let i = 0; i < data.length; i += 4) {
-      // 투명 픽셀은 건너뛰기
       if (data[i + 3] === 0) continue;
 
       const r = data[i];
@@ -139,141 +143,143 @@ export function SwimmingPool({
       const hsl = rgbToHsl(r, g, b);
       const hue = hsl[0];
 
-      // 현재 픽셀의 Hue가 지정한 범위(180~220) 안에 있는지 확인
-      if (hue >= sourceHueMin && hue <= sourceHueMax) {
-        // 새로운 Hue와 원본의 채도(S), 명도(L)를 사용해 새 RGB 값을 계산
+      // Handle hue wrap-around (e.g., red at 0/360 degrees)
+      const isInRange =
+        sourceHueMin > sourceHueMax
+          ? hue >= sourceHueMin || hue <= sourceHueMax
+          : hue >= sourceHueMin && hue <= sourceHueMax;
+
+      if (isInRange) {
         const newRgb = hslToRgb(newHue, hsl[1], hsl[2]);
-        
-        // 픽셀 데이터 교체
-        data[i] = newRgb[0];     // Red
+
+        data[i] = newRgb[0]; // Red
         data[i + 1] = newRgb[1]; // Green
         data[i + 2] = newRgb[2]; // Blue
       }
     }
 
-    // 5. 수정된 픽셀 데이터를 캔버스에 다시 그리기
+    // 5. Draw the recolored sprite back onto the canvas
     ctx.putImageData(imageData, 0, 0);
     return canvas.toDataURL();
-  }
+  };
 
-  // RGB 색상을 Hue로 변환하는 함수
+  // Convert RGB values to hue for palette swaps
   const rgbToHue = (r: number, g: number, b: number) => {
     const hsl = rgbToHsl(r, g, b);
     return hsl[0];
-  }
+  };
 
-  // 애니메이션 타이머 설정
   useEffect(() => {
-    // 200ms 간격으로 애니메이션 프레임 변경
+    // Advance the animation frame every 200ms
     animationRef.current = setInterval(() => {
-      setAnimationFrame(prev => prev + 1)
-    }, 200)
+      setAnimationFrame((prev) => prev + 1);
+    }, 200);
 
     return () => {
       if (animationRef.current) {
-        clearInterval(animationRef.current)
+        clearInterval(animationRef.current);
       }
-    }
-  }, [])
+    };
+  }, []);
 
-  // 색상 변경 시 모든 애니메이션 프레임 이미지 재생성
   useEffect(() => {
     const loadAndRecolorAllFrames = async () => {
-      const hue = rgbToHue(selectedColor.r, selectedColor.g, selectedColor.b)
-      const newImages = new Map(recoloredImages)
-      
-      // 각 방향과 프레임에 대해 색상 재적용
-      const directions: ('right' | 'left')[] = ['right', 'left']
+      const hue = rgbToHue(selectedColor.r, selectedColor.g, selectedColor.b);
+      const newImages = new Map(recoloredImages);
+
+      // Update sprite positions smoothly when distances change
+      const directions: ('right' | 'left')[] = ['right', 'left'];
       for (const direction of directions) {
         for (const frame of animationSequence) {
-          const img = new Image()
-          img.crossOrigin = 'anonymous'
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
           img.onload = () => {
-            const recoloredDataUrl = recolorImageByHue(img, hue)
+            const recoloredDataUrl = recolorImageByHue(img, hue);
             if (recoloredDataUrl) {
-              newImages.set(`swimmer-${direction}-frame-${frame}`, recoloredDataUrl)
-              setRecoloredImages(new Map(newImages))
+              newImages.set(`swimmer-${direction}-frame-${frame}`, recoloredDataUrl);
+              setRecoloredImages(new Map(newImages));
             }
-          }
+          };
           // img.src = getSwimmerImagePath(frame, direction)
-          img.src = getSwimmerImagePath(frame)
+          img.src = getSwimmerImagePath(frame);
         }
       }
-    }
+    };
 
-    loadAndRecolorAllFrames()
-  }, [selectedColor])
+    loadAndRecolorAllFrames();
+  }, [selectedColor]);
 
   const maxDistance = useMemo(() => {
-    if (swimmers.length === 0) return 0
-    return swimmers.reduce((max, swimmer) => Math.max(max, swimmer.distanceTraveled), 0)
-  }, [swimmers])
+    if (swimmers.length === 0) return 0;
+    return swimmers.reduce((max, swimmer) => Math.max(max, swimmer.distanceTraveled), 0);
+  }, [swimmers]);
 
   const getPosition = (distance: number) => {
     if (maxDistance === 0) {
-      return '10%'
+      return '10%';
     }
 
-    const normalized = Math.min(distance / Math.max(maxDistance, 1), 1)
-    const offset = 10 + normalized * 78
-    return `${offset}%`
-  }
+    const normalized = Math.min(distance / Math.max(maxDistance, 1), 1);
+    const offset = 10 + normalized * 78;
+    return `${offset}%`;
+  };
 
-  const selectedSwimmer = swimmers.find(swimmer => swimmer.id === selectedSwimmerId)
-  const selectedTuna = tunaCans.find(tuna => tuna.id === selectedTunaId)
+  const selectedSwimmer = swimmers.find((swimmer) => swimmer.id === selectedSwimmerId);
+  const selectedTuna = tunaCans.find((tuna) => tuna.id === selectedTunaId);
 
   const formatTimestamp = (timestamp: number) => {
-    if (!timestamp) return '미갱신'
-    const date = new Date(Number(timestamp))
+    if (!timestamp) return 'N/A';
+    const date = new Date(Number(timestamp));
     if (Number.isNaN(date.getTime())) {
-      return '미갱신'
+      return 'N/A';
     }
-    return date.toLocaleString()
-  }
+    return date.toLocaleString();
+  };
 
   if (swimmers.length === 0) {
     return (
       <div className="relative">
-        {/* 수영장 영역 */}
-        <div className="bg-cover bg-center bg-no-repeat rounded-xl p-8 aspect-video relative overflow-hidden mb-6" style={{ backgroundImage: 'url(/images/ocean_16-9.png)' }}>
-          {/* 물결 애니메이션 */}
+        <div
+          className="bg-cover bg-center bg-no-repeat rounded-xl p-8 aspect-video relative overflow-hidden mb-6"
+          style={{ backgroundImage: 'url(/images/ocean_16-9.png)' }}
+        >
           <div className="absolute inset-0">
             <div className="wave-animation"></div>
           </div>
-          
-          {/* 수영장 레인 */}
+
           <div className="absolute inset-0 flex">
             {[...Array(5)].map((_, i) => (
               <div key={i} className="flex-1 border-l-2 border-blue-400 opacity-30"></div>
             ))}
           </div>
-          
+
           <div className="relative flex items-center justify-center h-full">
             <div className="text-center bg-white/80 rounded-lg p-6">
-              <img 
-                src={recoloredImages.get(`swimmer-right-frame-${getCurrentFrame()}`) || `/images/mint_water(${getCurrentFrame()}).png`} 
-                alt="Swimmer" 
-                className="w-16 h-16 mx-auto mb-4" 
+              <img
+                src={
+                  recoloredImages.get(`swimmer-right-frame-${getCurrentFrame()}`) ||
+                  `/images/mint_water(${getCurrentFrame()}).png`
+                }
+                alt="Swimmer"
+                className="w-16 h-16 mx-auto mb-4"
               />
-              <p className="text-gray-700 font-medium">
-                수영 선수를 생성하면 여기에 표시됩니다!
-              </p>
+              <p className="text-gray-700 font-medium">Coach your first swimmer to see them here</p>
               <p className="text-sm text-gray-500 mt-2">
-                지갑 연결 후 코드를 배포해보세요
+                Connect your wallet and deploy the Move package to get started
               </p>
             </div>
           </div>
         </div>
 
-        {/* 게임 콘솔 컨트롤 패널 */}
+        {/* gameplay console container */}
         <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">🎮 게임 콘솔</h3>
-            <span className="text-xs text-gray-500">인벤토리 {tunaCans.length}개</span>
+            <h3 className="text-lg font-semibold text-gray-900">Gameplay Console</h3>
+            <span className="text-xs text-gray-500">Tuna inventory {tunaCans.length}</span>
           </div>
 
           <div className="text-center text-gray-500 py-4">
-            <p>먼저 Swimmer를 민팅한 후 게임을 시작하세요</p>
+            <p>Mint a swimmer first, then jump into the console.</p>
           </div>
 
           <div className="flex flex-wrap gap-2 mb-3">
@@ -282,226 +288,273 @@ export function SwimmingPool({
               disabled={!packageId || !currentAccount || actionLoading === 'mintTuna'}
               className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {actionLoading === 'mintTuna' ? '민팅 중...' : '🍣 참치 민팅'}
+              {actionLoading === 'mintTuna' ? 'Minting...' : 'Mint tuna can'}
             </button>
           </div>
 
           <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
-            💡 먼저 Swimmer를 민팅하고 게임을 시작해보세요
+            Tip: mint a swimmer before using the console controls.
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
     <div className="relative">
-      {/* 수영장 영역 */}
-      <div className="bg-cover bg-center bg-no-repeat rounded-xl p-8 h-[28rem] relative overflow-hidden mb-6" style={{ backgroundImage: 'url(/images/ocean_16-9.png)' }}>
-        {/* 물결 애니메이션 */}
+      {/* swimmer track */}
+      <div
+        className="bg-cover bg-center bg-no-repeat rounded-xl p-8 h-[28rem] relative overflow-hidden mb-6"
+        style={{ backgroundImage: 'url(/images/ocean_16-9.png)' }}
+      >
+        {/* wave animation */}
         <div className="absolute inset-0">
           <div className="wave-animation"></div>
         </div>
-        
-        {/* 수영장 레인 */}
+
+        {/* lane markers */}
         <div className="absolute inset-0 flex">
           {[...Array(5)].map((_, i) => (
             <div key={i} className="flex-1 border-l-2 border-blue-400 opacity-30"></div>
           ))}
         </div>
-        
-        {/* 아이템 표시 */}
+
+        {/* floating items */}
         <div className="absolute top-4 left-4">
           <img src="/images/tuna_can.png" alt="Tuna Can" className="w-8 h-8" />
           {/* <img src="/images/tuna_floating.png" alt="Tuna Floating" className="w-8 h-8 ml-2" /> */}
         </div>
-        
-        {/* 수영 선수들 */}
+
+        {/* swimmer avatars */}
         <div className="relative h-full">
           {swimmers.map((swimmer, index) => {
-            const currentFrame = getCurrentFrame()
+            const currentFrame = getCurrentFrame();
             // const direction = getSwimmerDirection(swimmer, index)
             // const frameImage = recoloredImages.get(`swimmer-${direction}-frame-${currentFrame}`) || getSwimmerImagePath(currentFrame, direction)
-            const frameImage = recoloredImages.get(`swimmer-frame-${currentFrame}`)
-            
+            const frameImage = recoloredImages.get(`swimmer-frame-${currentFrame}`);
+
             return (
               <div
                 key={swimmer.id}
                 className="absolute flex items-center"
                 style={{
-                  top: `${(index * 60) + 20}px`,
+                  top: `${index * 60 + 20}px`,
                   left: getPosition(swimmer.distanceTraveled),
                   transition: 'left 1.5s ease-out',
                 }}
               >
-                <img 
-                  src={frameImage} 
-                  alt="Swimmer" 
-                  className="w-12 h-12" 
-                />
+                <img src={frameImage} alt="Swimmer" className="w-12 h-12" />
                 <div className="ml-3 bg-white/90 rounded-lg px-3 py-1 shadow">
                   <div className="font-bold text-sm">{swimmer.name}</div>
-                  <div className="text-xs text-gray-600">
-                    {swimmer.species}
-                  </div>
-                  <div className="text-xs text-blue-600">
-                    총 이동 {swimmer.distanceTraveled}m
-                  </div>
+                  <div className="text-xs text-gray-600">{swimmer.species}</div>
+                  <div className="text-xs text-blue-600">Distance {swimmer.distanceTraveled} m</div>
                 </div>
               </div>
-            )
+            );
           })}
         </div>
-        
-        {/* 능력치 표시 */}
+
+        {/* swimmer status panel */}
         <div className="absolute top-4 right-4 bg-white/90 rounded-lg p-3 shadow">
-          <h4 className="font-semibold text-sm mb-2">선수 현황</h4>
-          {swimmers.map(swimmer => (
+          <h4 className="font-semibold text-sm mb-2">Swimmer stats</h4>
+          {swimmers.map((swimmer) => (
             <div key={swimmer.id} className="text-xs mb-1">
               <span className="font-medium">{swimmer.name}</span>
               <div className="flex gap-3 text-gray-600">
-                <span>기본 속도: {swimmer.baseSpeedPerHour}m/h</span>
-                <span>마지막 업데이트: {formatTimestamp(swimmer.lastUpdateTimestampMs)}</span>
+                <span>Base speed: {swimmer.baseSpeedPerHour} m/h</span>
+                <span>Last update: {formatTimestamp(swimmer.lastUpdateTimestampMs)}</span>
               </div>
             </div>
           ))}
         </div>
       </div>
-      
-      {/* 게임 콘솔 컨트롤 패널 */}
+
+      {/* gameplay console container */}
       <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">🎮 게임 콘솔</h3>
-          <span className="text-xs text-gray-500">인벤토리 {tunaCans.length}개</span>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">Gameplay Console</h3>
+            <p className="text-xs text-gray-500">
+              Manage your swimmers and supplies before triggering on-chain actions.
+            </p>
+          </div>
+          <span className="text-xs text-gray-500">Tuna inventory {tunaCans.length}</span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div className="grid gap-6 lg:grid-cols-2">
           <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Swimmer 선택</label>
-            <select
-              value={selectedSwimmerId}
-              onChange={(event) => onSwimmerSelect?.(event.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-              disabled={swimmers.length === 0}
-            >
-              {swimmers.length === 0 ? (
-                <option>먼저 Swimmer를 민팅하세요</option>
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-semibold uppercase tracking-wide text-gray-700">Swimmer roster</h4>
+              <span className="text-xs text-gray-500">{swimmers.length}</span>
+            </div>
+            <div className="mt-3 space-y-2">
+              {swimmers.length ? (
+                swimmers.map((swimmer) => {
+                  const isSelected = swimmer.id === selectedSwimmerId;
+                  return (
+                    <button
+                      key={swimmer.id}
+                      type="button"
+                      onClick={() => onSwimmerSelect?.(swimmer.id)}
+                      className={`w-full rounded-lg border px-4 py-3 text-left transition ${
+                        isSelected
+                          ? 'border-blue-500 bg-blue-50/80 shadow-inner'
+                          : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/40'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between text-sm font-semibold text-gray-900">
+                        <span>{swimmer.name}</span>
+                        <span className="text-xs font-normal text-gray-500">{swimmer.distanceTraveled} m</span>
+                      </div>
+                      <div className="mt-1 text-xs text-gray-500">{swimmer.species}</div>
+                      <div className="mt-1 text-xs text-blue-600">Base speed {swimmer.baseSpeedPerHour} m/h</div>
+                      <div className="mt-1 text-[10px] text-gray-400">
+                        Last update {formatTimestamp(swimmer.lastUpdateTimestampMs)}
+                      </div>
+                    </button>
+                  );
+                })
               ) : (
-                swimmers.map((swimmer) => (
-                  <option key={swimmer.id} value={swimmer.id}>
-                    {swimmer.name} · {swimmer.distanceTraveled}m
-                  </option>
-                ))
+                <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
+                  Mint a swimmer from the lesson flow to populate this roster.
+                </div>
               )}
-            </select>
-            {selectedSwimmer && (
-              <p className="mt-1 text-xs text-gray-500">
-                기본 속도 {selectedSwimmer.baseSpeedPerHour}m/h
-              </p>
-            )}
+            </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">TunaCan 인벤토리</label>
-            <select
-              value={selectedTunaId}
-              onChange={(event) => onTunaSelect?.(event.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-              disabled={tunaCans.length === 0}
-            >
-              {tunaCans.length === 0 ? (
-                <option>참치를 민팅하면 여기에 표시됩니다</option>
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-semibold uppercase tracking-wide text-gray-700">Tuna inventory</h4>
+              <span className="text-xs text-gray-500">{tunaCans.length}</span>
+            </div>
+            <div className="mt-3 space-y-2">
+              {tunaCans.length ? (
+                tunaCans.map((tuna) => {
+                  const isSelected = tuna.id === selectedTunaId;
+                  return (
+                    <button
+                      key={tuna.id}
+                      type="button"
+                      onClick={() => onTunaSelect?.(tuna.id)}
+                      className={`w-full rounded-lg border px-4 py-3 text-left transition ${
+                        isSelected
+                          ? 'border-emerald-500 bg-emerald-50/80 shadow-inner'
+                          : 'border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/40'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between text-sm font-semibold text-gray-900">
+                        <span>
+                          {tuna.id.slice(0, 6)}...{tuna.id.slice(-4)}
+                        </span>
+                        <span className="text-xs font-normal text-emerald-600">+{tuna.energy} m</span>
+                      </div>
+                    </button>
+                  );
+                })
               ) : (
-                tunaCans.map((tuna) => (
-                  <option key={tuna.id} value={tuna.id}>
-                    {tuna.id.slice(0, 6)}...{tuna.id.slice(-4)} · +{tuna.energy}m
-                  </option>
-                ))
+                <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
+                  Mint a tuna can to feed your swimmers.
+                </div>
               )}
-            </select>
-            {selectedTuna && (
-              <p className="mt-1 text-xs text-gray-500">보너스 거리 +{selectedTuna.energy}m</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">수영모 색상 (RGB)</label>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="text-xs w-4">R</span>
-                <input
-                  type="range"
-                  min="0"
-                  max="255"
-                  value={selectedColor.r}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSelectedColor(prev => ({ ...prev, r: Number(e.target.value) }))}
-                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                />
-                <span className="text-xs w-8 text-center">{selectedColor.r}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs w-4">G</span>
-                <input
-                  type="range"
-                  min="0"
-                  max="255"
-                  value={selectedColor.g}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSelectedColor(prev => ({ ...prev, g: Number(e.target.value) }))}
-                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                />
-                <span className="text-xs w-8 text-center">{selectedColor.g}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs w-4">B</span>
-                <input
-                  type="range"
-                  min="0"
-                  max="255"
-                  value={selectedColor.b}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSelectedColor(prev => ({ ...prev, b: Number(e.target.value) }))}
-                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                />
-                <span className="text-xs w-8 text-center">{selectedColor.b}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs">미리보기:</span>
-                <div
-                  className="w-6 h-6 rounded border border-gray-300"
-                  style={{ backgroundColor: `rgb(${selectedColor.r}, ${selectedColor.g}, ${selectedColor.b})` }}
-                ></div>
-              </div>
             </div>
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2 mb-3">
-          <button
-            onClick={onUpdateProgress}
-            disabled={!packageId || !currentAccount || !selectedSwimmerId || actionLoading === 'update'}
-            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {actionLoading === 'update' ? '업데이트 중...' : '⏱ 자동 전진'}
-          </button>
-          <button
-            onClick={onMintTuna}
-            disabled={!packageId || !currentAccount || actionLoading === 'mintTuna'}
-            className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {actionLoading === 'mintTuna' ? '민팅 중...' : '🍣 참치 민팅'}
-          </button>
-          <button
-            onClick={onEatTuna}
-            disabled={!packageId || !currentAccount || !selectedSwimmerId || !selectedTunaId || actionLoading === 'eatTuna'}
-            className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {actionLoading === 'eatTuna' ? '처리 중...' : '🍽 먹이기'}
-          </button>
-        </div>
+        <div className="mt-8 border-t border-gray-200 pt-6">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+            <div>
+              <h4 className="text-sm font-semibold uppercase tracking-wide text-gray-700">Actions</h4>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  onClick={onUpdateProgress}
+                  disabled={!packageId || !currentAccount || !selectedSwimmerId || actionLoading === 'update'}
+                  className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {actionLoading === 'update' ? 'Updating...' : 'Update progress'}
+                </button>
+                <button
+                  onClick={onMintTuna}
+                  disabled={!packageId || !currentAccount || actionLoading === 'mintTuna'}
+                  className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {actionLoading === 'mintTuna' ? 'Minting...' : 'Mint tuna can'}
+                </button>
+                <button
+                  onClick={onEatTuna}
+                  disabled={
+                    !packageId ||
+                    !currentAccount ||
+                    !selectedSwimmerId ||
+                    !selectedTunaId ||
+                    actionLoading === 'eatTuna'
+                  }
+                  className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {actionLoading === 'eatTuna' ? 'Feeding...' : 'Feed tuna can'}
+                </button>
+              </div>
+              <p className="mt-3 text-xs text-gray-500">
+                These buttons invoke the Move entry functions update_progress, mint_tuna, and eat_tuna.
+              </p>
+            </div>
 
-        <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
-          💡 update_progress → mint_tuna → eat_tuna 순서로 진행해보세요
+            <div>
+              <h4 className="text-sm font-semibold uppercase tracking-wide text-gray-700">Swimmer palette</h4>
+              <div className="mt-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs w-4">R</span>
+                  <input
+                    type="range"
+                    min="0"
+                    max="255"
+                    value={selectedColor.r}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setSelectedColor((prev) => ({ ...prev, r: Number(e.target.value) }))
+                    }
+                    className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                  />
+                  <span className="text-xs w-8 text-center">{selectedColor.r}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs w-4">G</span>
+                  <input
+                    type="range"
+                    min="0"
+                    max="255"
+                    value={selectedColor.g}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setSelectedColor((prev) => ({ ...prev, g: Number(e.target.value) }))
+                    }
+                    className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                  />
+                  <span className="text-xs w-8 text-center">{selectedColor.g}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs w-4">B</span>
+                  <input
+                    type="range"
+                    min="0"
+                    max="255"
+                    value={selectedColor.b}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setSelectedColor((prev) => ({ ...prev, b: Number(e.target.value) }))
+                    }
+                    className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                  />
+                  <span className="text-xs w-8 text-center">{selectedColor.b}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs">Preview</span>
+                  <div
+                    className="h-6 w-6 rounded border border-gray-300"
+                    style={{ backgroundColor: `rgb(${selectedColor.r}, ${selectedColor.g}, ${selectedColor.b})` }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-  )
+  );
 }

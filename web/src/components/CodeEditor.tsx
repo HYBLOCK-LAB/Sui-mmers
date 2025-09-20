@@ -273,7 +273,7 @@ export function CodeEditor({ onMint, disabled, codeTemplate, codeSkeletone, read
       <CardHeader>
         <CardTitle>Code Editer</CardTitle>
       </CardHeader>
-      <CardContent className="min-h-[320px] flex-1">
+      <CardContent className="flex-1">
         {hasChecker ? (
           showSolution ? (
             <DiffEditor
@@ -349,7 +349,9 @@ export function CodeEditor({ onMint, disabled, codeTemplate, codeSkeletone, read
             {status === 'success' ? (
               <span className="text-emerald-600">Great job! Your solution matches the reference implementation.</span>
             ) : status === 'error' ? (
-              <span className="text-red-600">Not quite there yet. Compare with the reference or keep iterating.</span>
+              <span className="text-red-600 font-semibold">
+                Not quite there yet. Compare with the reference or keep iterating.
+              </span>
             ) : (
               <span className="text-gray-600">
                 Fill in the missing pieces, then check your answer when you are ready.
