@@ -127,118 +127,126 @@ swimming = "0x0"`
    */
   static getSwimmerMoveTemplate(): string {
     return `module swimming::swimmer {
-    use sui::object::{Self, UID};
-    use sui::transfer;
-    use sui::tx_context::{Self, TxContext};
+    use sui::clock::{Self, Clock};
     use sui::event;
+    use sui::object::{Self, UID};
+    use sui::tx_context::{Self, TxContext};
+    use sui::transfer;
     use std::string::{Self, String};
-    
-    /// Swimmer NFT
+
+    const BASE_DISTANCE_PER_HOUR: u64 = 100;
+    const TUNA_DISTANCE_BONUS: u64 = 10;
+
     public struct Swimmer has key, store {
         id: UID,
+        owner: address,
         name: String,
-        speed: u64,
-        style: u8,  // 0: 자유형, 1: 배영, 2: 평영, 3: 접영
-        stamina: u64,
-        medals: u64,
+        species: String,
+        distance_traveled: u64,
+        base_speed_per_hour: u64,
+        last_update_timestamp_ms: u64,
     }
-    
-    /// Event emitted when a new swimmer is created
-    public struct SwimmerCreated has copy, drop {
+
+    public struct TunaCan has key, store {
+        id: UID,
+        energy: u64,
+    }
+
+    public struct SwimmerMinted has copy, drop {
         swimmer_id: address,
+        owner: address,
         name: String,
-        creator: address,
+        species: String,
     }
-    
-    /// Event emitted when a swimmer is trained
-    public struct SwimmerTrained has copy, drop {
+
+    public struct ProgressUpdated has copy, drop {
         swimmer_id: address,
-        new_speed: u64,
-        new_stamina: u64,
+        new_distance: u64,
     }
-    
-    /// 에러 코드
-    const EInvalidStyle: u64 = 0;
-    const ENotEnoughStamina: u64 = 1;
-    const EInvalidLength: u64 = 2;
-    const EMaxSpeedReached: u64 = 3;
-    const EMaxStaminaReached: u64 = 4;
-    
-    /// Swimmer NFT 생성
-    public entry fun create_swimmer(
-        name: vector<u8>, 
-        style: u8,
+
+    public struct TunaEaten has copy, drop {
+        swimmer_id: address,
+        total_distance: u64,
+        bonus_applied: u64,
+    }
+
+    public entry fun mint_swimmer(
+        name: vector<u8>,
+        species: vector<u8>,
+        clock: &Clock,
         ctx: &mut TxContext
     ) {
-        assert!(style < 4, EInvalidStyle);
-        
+        let owner = tx_context::sender(ctx);
         let swimmer = Swimmer {
             id: object::new(ctx),
+            owner,
             name: string::utf8(name),
-            speed: 10,
-            style,
-            stamina: 100,
-            medals: 0,
+            species: string::utf8(species),
+            distance_traveled: 0,
+            base_speed_per_hour: BASE_DISTANCE_PER_HOUR,
+            last_update_timestamp_ms: clock::timestamp_ms(clock),
         };
-        
-        let swimmer_id = object::uid_to_address(&swimmer.id);
-        let creator = tx_context::sender(ctx);
-        
-        // 이벤트 발생
-        event::emit(SwimmerCreated {
-            swimmer_id,
-            name: swimmer.name,
-            creator,
+
+        event::emit(SwimmerMinted {
+            swimmer_id: object::uid_to_address(&swimmer.id),
+            owner,
+            name: string::clone(&swimmer.name),
+            species: string::clone(&swimmer.species),
         });
-        
-        transfer::public_transfer(swimmer, creator);
+
+        transfer::public_transfer(swimmer, owner);
     }
-    
-    /// 훈련하여 능력치 향상
-    public entry fun train(swimmer: &mut Swimmer) {
-        swimmer.speed = swimmer.speed + 5;
-        swimmer.stamina = swimmer.stamina + 10;
-        
-        let swimmer_id = object::uid_to_address(&swimmer.id);
-        
-        // 이벤트 발생
-        event::emit(SwimmerTrained {
-            swimmer_id,
-            new_speed: swimmer.speed,
-            new_stamina: swimmer.stamina,
+
+    public entry fun update_progress(
+        swimmer: &mut Swimmer,
+        clock: &Clock
+    ) {
+        let current_time = clock::timestamp_ms(clock);
+        let last_time = swimmer.last_update_timestamp_ms;
+
+        if (current_time > last_time) {
+            let elapsed_time_ms = current_time - last_time;
+            let distance_to_add = (elapsed_time_ms * swimmer.base_speed_per_hour) / 3_600_000;
+
+            if (distance_to_add > 0) {
+                swimmer.distance_traveled = swimmer.distance_traveled + distance_to_add;
+                swimmer.last_update_timestamp_ms = current_time;
+
+                event::emit(ProgressUpdated {
+                    swimmer_id: object::uid_to_address(&swimmer.id),
+                    new_distance: swimmer.distance_traveled,
+                });
+            }
+        }
+    }
+
+    public entry fun mint_tuna(
+        ctx: &mut TxContext
+    ) {
+        let tuna = TunaCan {
+            id: object::new(ctx),
+            energy: TUNA_DISTANCE_BONUS,
+        };
+
+        transfer::public_transfer(tuna, tx_context::sender(ctx));
+    }
+
+    public entry fun eat_tuna(
+        swimmer: &mut Swimmer,
+        tuna: TunaCan,
+        clock: &Clock
+    ) {
+        update_progress(swimmer, clock);
+
+        let TunaCan { id, energy } = tuna;
+        swimmer.distance_traveled = swimmer.distance_traveled + energy;
+        object::delete(id);
+
+        event::emit(TunaEaten {
+            swimmer_id: object::uid_to_address(&swimmer.id),
+            total_distance: swimmer.distance_traveled,
+            bonus_applied: energy,
         });
-    }
-    
-    /// 메달 획득
-    public entry fun award_medal(swimmer: &mut Swimmer) {
-        swimmer.medals = swimmer.medals + 1;
-    }
-    
-    /// 수영 스타일 변경
-    public entry fun change_style(swimmer: &mut Swimmer, new_style: u8) {
-        assert!(new_style < 4, EInvalidStyle);
-        swimmer.style = new_style;
-    }
-    
-    /// Getter 함수들
-    public fun get_name(swimmer: &Swimmer): &String {
-        &swimmer.name
-    }
-    
-    public fun get_speed(swimmer: &Swimmer): u64 {
-        swimmer.speed
-    }
-    
-    public fun get_stamina(swimmer: &Swimmer): u64 {
-        swimmer.stamina
-    }
-    
-    public fun get_style(swimmer: &Swimmer): u8 {
-        swimmer.style
-    }
-    
-    public fun get_medals(swimmer: &Swimmer): u64 {
-        swimmer.medals
     }
 }`
   }

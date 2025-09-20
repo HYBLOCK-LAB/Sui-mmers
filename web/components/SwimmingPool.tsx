@@ -1,46 +1,33 @@
-import { useEffect, useState } from 'react'
-import { STYLE_NAMES, SwimmingStyle } from '@/src/contracts/moveTemplates'
-
-interface Swimmer {
-  id: string
-  name: string
-  speed: number
-  style: number
-  stamina: number
-  medals: number
-}
+import { useMemo } from 'react'
+import { SwimmerSummary } from '@/lib/types/swimmer'
 
 interface SwimmingPoolProps {
-  swimmers: Swimmer[]
+  swimmers: SwimmerSummary[]
 }
 
 export function SwimmingPool({ swimmers }: SwimmingPoolProps) {
-  const [animatingSwimmers, setAnimatingSwimmers] = useState<Set<string>>(new Set())
-
-  useEffect(() => {
-    // 새 수영선수가 추가되면 애니메이션 시작
-    const newSwimmerIds = swimmers.map(s => s.id)
-    setAnimatingSwimmers(new Set(newSwimmerIds))
+  const maxDistance = useMemo(() => {
+    if (swimmers.length === 0) return 0
+    return swimmers.reduce((max, swimmer) => Math.max(max, swimmer.distanceTraveled), 0)
   }, [swimmers])
 
-  const getSwimmerStyle = (style: number) => {
-    switch (style) {
-      case SwimmingStyle.FREESTYLE:
-        return 'rotate-12' // 자유형 - 약간 기울어진 자세
-      case SwimmingStyle.BACKSTROKE:
-        return 'rotate-180' // 배영 - 뒤집힌 자세
-      case SwimmingStyle.BREASTSTROKE:
-        return 'scale-x-110' // 평영 - 넓은 자세
-      case SwimmingStyle.BUTTERFLY:
-        return 'scale-y-90' // 접영 - 다이나믹한 자세
-      default:
-        return ''
+  const getPosition = (distance: number) => {
+    if (maxDistance === 0) {
+      return '10%'
     }
+
+    const normalized = Math.min(distance / Math.max(maxDistance, 1), 1)
+    const offset = 10 + normalized * 78
+    return `${offset}%`
   }
 
-  const getAnimationDuration = (speed: number) => {
-    // 속도가 빠를수록 애니메이션 시간이 짧음
-    return `${8 - (speed / 100) * 5}s`
+  const formatTimestamp = (timestamp: number) => {
+    if (!timestamp) return '미갱신'
+    const date = new Date(Number(timestamp))
+    if (Number.isNaN(date.getTime())) {
+      return '미갱신'
+    }
+    return date.toLocaleString()
   }
 
   if (swimmers.length === 0) {
@@ -95,38 +82,35 @@ export function SwimmingPool({ swimmers }: SwimmingPoolProps) {
             className="absolute flex items-center"
             style={{
               top: `${(index * 60) + 20}px`,
-              left: animatingSwimmers.has(swimmer.id) ? '90%' : '10px',
-              transition: `left ${getAnimationDuration(swimmer.speed)} ease-in-out`,
+              left: getPosition(swimmer.distanceTraveled),
+              transition: 'left 1.5s ease-out',
             }}
           >
-            <div className={`text-4xl ${getSwimmerStyle(swimmer.style)} transition-transform`}>
-              🏊
+            <div className="text-4xl">
+              🏊‍♂️
             </div>
-            <div className="ml-3 bg-white/90 rounded-lg px-3 py-1">
+            <div className="ml-3 bg-white/90 rounded-lg px-3 py-1 shadow">
               <div className="font-bold text-sm">{swimmer.name}</div>
               <div className="text-xs text-gray-600">
-                {STYLE_NAMES[swimmer.style as SwimmingStyle]} | 속도: {swimmer.speed}
+                {swimmer.species}
               </div>
-              {swimmer.medals > 0 && (
-                <div className="text-xs">
-                  {'🥇'.repeat(Math.min(swimmer.medals, 5))}
-                </div>
-              )}
+              <div className="text-xs text-blue-600">
+                총 이동 {swimmer.distanceTraveled}m
+              </div>
             </div>
           </div>
         ))}
       </div>
       
       {/* 능력치 표시 */}
-      <div className="absolute bottom-4 right-4 bg-white/90 rounded-lg p-3">
+      <div className="absolute bottom-4 right-4 bg-white/90 rounded-lg p-3 shadow">
         <h4 className="font-semibold text-sm mb-2">선수 현황</h4>
         {swimmers.map(swimmer => (
           <div key={swimmer.id} className="text-xs mb-1">
             <span className="font-medium">{swimmer.name}</span>
             <div className="flex gap-3 text-gray-600">
-              <span>속도: {swimmer.speed}</span>
-              <span>체력: {swimmer.stamina}</span>
-              <span>메달: {swimmer.medals}</span>
+              <span>기본 속도: {swimmer.baseSpeedPerHour}m/h</span>
+              <span>마지막 업데이트: {formatTimestamp(swimmer.lastUpdateTimestampMs)}</span>
             </div>
           </div>
         ))}
