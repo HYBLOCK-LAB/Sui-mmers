@@ -1,20 +1,18 @@
-import { Transaction } from '@mysten/sui/transactions'
-import { fromBase64 } from '@mysten/sui/utils'
+import { Transaction } from '@mysten/sui/transactions';
+import { fromBase64 } from '@mysten/sui/utils';
 
 /**
  * API 기반 Move 컴파일러
  * Next.js API Routes를 통해 서버사이드에서 Move 코드를 컴파일
  */
 export class ApiMoveCompiler {
-  
   /**
    * Move 소스 코드를 API를 통해 컴파일
    */
   static async compileMove(
     moduleName: string,
     sourceCode: string
-  ): Promise<{ bytecode: string, dependencies: string[] }> {
-    
+  ): Promise<{ bytecode: string; dependencies: string[] }> {
     const response = await fetch('/api/compile', {
       method: 'POST',
       headers: {
@@ -24,20 +22,20 @@ export class ApiMoveCompiler {
         moveCode: sourceCode,
         moduleName: moduleName,
       }),
-    })
-    
-    const result = await response.json()
-    
+    });
+
+    const result = await response.json();
+
     if (!result.success) {
-      throw new Error(result.error || 'Compilation failed')
+      throw new Error(result.error || 'Compilation failed');
     }
-    
+
     return {
       bytecode: result.bytecode,
       dependencies: result.dependencies,
-    }
+    };
   }
-  
+
   /**
    * 배포 트랜잭션 생성 (API를 통해 컴파일된 바이트코드 사용)
    */
@@ -47,47 +45,47 @@ export class ApiMoveCompiler {
     senderAddress: string
   ): Promise<Transaction> {
     // API를 통해 Move 코드 컴파일
-    const { bytecode, dependencies } = await this.compileMove(moduleName, sourceCode)
-    
+    const { bytecode, dependencies } = await this.compileMove(moduleName, sourceCode);
+
     // Transaction 생성
-    const tx = new Transaction()
-    
+    const tx = new Transaction();
+
     // 가스 예산 설정 (디버깅용 큰 값)
-    tx.setGasBudget(100000000)
-    
+    tx.setGasBudget(100000000);
+
     // sender 주소 검증
     if (!senderAddress) {
-      throw new Error('Sender address is required for deployment')
+      throw new Error('Sender address is required for deployment');
     }
-    console.log('Deploying with sender:', senderAddress)
-    
+    console.log('Deploying with sender:', senderAddress);
+
     // Base64를 Uint8Array로 변환
-    const bytecodeBytes = fromBase64(bytecode)
-    console.log('Bytecode length:', bytecodeBytes.length)
-    console.log('Dependencies:', dependencies)
-    
+    const bytecodeBytes = fromBase64(bytecode);
+    console.log('Bytecode length:', bytecodeBytes.length);
+    console.log('Dependencies:', dependencies);
+
     // 패키지 배포 - SDK 공식 문서에 따라 배열로 반환됨
     const [upgradeCap] = tx.publish({
       modules: [bytecodeBytes],
       dependencies: dependencies,
-    })
-    
+    });
+
     // UpgradeCap을 sender에게 명시적으로 전송 (필수)
     // SDK 문서: "you must explicitly transfer the UpgradeCap object"
     // tx.pure.address() 사용하여 주소 타입 명시
-    tx.transferObjects([upgradeCap], tx.pure.address(senderAddress))
-    
+    tx.transferObjects([upgradeCap], tx.pure.address(senderAddress));
+
     // 디버깅: 트랜잭션 상세 정보 출력
-    console.log('Transaction built with sender:', senderAddress)
+    console.log('Transaction built with sender:', senderAddress);
     console.log('Transaction details:', {
       sender: senderAddress,
       upgradeCap: upgradeCap,
-      commands: tx.blockData.transactions
-    })
-    
-    return tx
+      commands: tx.blockData.transactions,
+    });
+
+    return tx;
   }
-  
+
   /**
    * swimmer.move 소스 코드 템플릿 (초보자용 간단한 버전)
    * 단계별로 복잡도를 높여갈 수 있도록 기본 구조만 포함
@@ -139,7 +137,7 @@ export class ApiMoveCompiler {
     public fun get_distance(swimmer: &Swimmer): u64 {
         swimmer.distance_traveled
     }
-}`
+}`;
   }
 
   /**
@@ -250,6 +248,6 @@ export class ApiMoveCompiler {
         swimmer.distance_traveled = swimmer.distance_traveled + energy;
         object::delete(id);
     }
-}`
+}`;
   }
 }
