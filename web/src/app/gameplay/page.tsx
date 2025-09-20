@@ -108,7 +108,7 @@ export default function Gameplay() {
       const tx = new Transaction();
       tx.moveCall({
         target: `${packageId}::swimmer::mint_swimmer`,
-        arguments: [tx.pure.string(name), tx.pure.string(species), tx.object(CLOCK_OBJECT_ID)],
+        arguments: [tx.pure.string(name), tx.pure.string(species)],
       });
 
       signAndExecute(
@@ -132,6 +132,170 @@ export default function Gameplay() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleCompileAndDeploy = async (transaction: Transaction) => {
+    if (!currentAccount) {
+      alert('먼저 지갑을 연결해주세요!');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      signAndExecute(
+        {
+          transaction,
+        },
+        {
+          onSuccess: (result) => {
+            console.log('Deployment result:', result);
+            // Extract package ID from the transaction result
+            const objectChanges = result.objectChanges || [];
+            const publishedPackage = objectChanges.find(
+              (change: any) => change.type === 'published'
+            );
+            
+            if (publishedPackage && publishedPackage.packageId) {
+              setPackageId(publishedPackage.packageId);
+              alert('🚀 스마트 컨트랙트가 성공적으로 배포되었습니다!');
+              
+              // After successful deployment, automatically mint a swimmer
+              setTimeout(() => {
+                handleMintSwimmer('My First Swimmer', 'Pacific Orca');
+              }, 1000);
+            } else {
+              alert('✅ 트랜잭션이 성공했지만 패키지 ID를 찾을 수 없습니다.');
+            }
+          },
+          onError: (error) => {
+            console.error('Deployment failed:', error);
+            alert('배포 실패: ' + error.message);
+          },
+        }
+      );
+    } catch (error) {
+      console.error('Failed to deploy:', error);
+      alert('배포 실패: ' + (error as Error).message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleMintFromTemplate = async () => {
+    if (!currentAccount) {
+      alert('먼저 지갑을 연결해주세요!');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Compile Move code through API
+      const response = await fetch('/api/compile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          moveCode: getMoveTemplate(),
+          moduleName: 'swimmer',
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Compilation failed');
+      }
+
+      // Create deployment transaction with compiled bytecode
+      const tx = new Transaction();
+      const bytecodeBytes = Uint8Array.from(atob(result.bytecode), c => c.charCodeAt(0));
+      
+      const publishResult = tx.publish({
+        modules: [bytecodeBytes],
+        dependencies: result.dependencies,
+      });
+
+      if (publishResult) {
+        const upgradeCap = Array.isArray(publishResult) ? publishResult[0] : publishResult;
+        tx.transferObjects([upgradeCap], tx.gas);
+      }
+
+      // Deploy the contract
+      signAndExecute(
+        { transaction: tx },
+        {
+          onSuccess: (deployResult) => {
+            console.log('Template deployment result:', deployResult);
+            const objectChanges = deployResult.objectChanges || [];
+            const publishedPackage = objectChanges.find(
+              (change: any) => change.type === 'published'
+            );
+            
+            if (publishedPackage && publishedPackage.packageId) {
+              setPackageId(publishedPackage.packageId);
+              
+              // Auto-mint swimmer after deployment
+              setTimeout(() => {
+                handleMintSwimmer('Template Swimmer', 'Pacific Dolphin');
+              }, 1000);
+              
+              alert('🎉 Template compiled and deployed! Auto-minting swimmer...');
+            }
+          },
+          onError: (error) => {
+            console.error('Template deployment failed:', error);
+            alert('Template deployment failed: ' + error.message);
+          },
+        }
+      );
+    } catch (error) {
+      console.error('Failed to mint from template:', error);
+      alert('Failed to compile and mint: ' + (error as Error).message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getMoveTemplate = () => {
+    return `module swimming::swimmer {
+    use sui::object::{Self, UID};
+    use sui::transfer;
+    use sui::tx_context::{Self, TxContext};
+    use std::string::{Self, String};
+    
+    /// Level 1 - Basic Swimmer NFT
+    public struct Swimmer has key, store {
+        id: UID,
+        name: String,
+        species: String,
+        distance_traveled: u64,
+    }
+    
+    /// Create a new swimmer
+    public entry fun mint_swimmer(
+        name: vector<u8>,
+        species: vector<u8>,
+        ctx: &mut TxContext
+    ) {
+        let swimmer = Swimmer {
+            id: object::new(ctx),
+            name: string::utf8(name),
+            species: string::utf8(species),
+            distance_traveled: 0,
+        };
+        
+        transfer::public_transfer(swimmer, tx_context::sender(ctx));
+    }
+    
+    /// Move the swimmer forward
+    public entry fun swim_forward(
+        swimmer: &mut Swimmer,
+        distance: u64,
+    ) {
+        swimmer.distance_traveled = swimmer.distance_traveled + distance;
+    }
+}`;
   };
 
   const handleUpdateProgress = async () => {
@@ -293,7 +457,7 @@ export default function Gameplay() {
           </div>
           <div className="flex items-center gap-3">
             <Button asChild variant="outline" size="sm">
-              <Link href="/">← 메인으로</Link>
+              <Link href="/lessons">← Lessons</Link>
             </Button>
             <WalletConnect />
           </div>
@@ -302,14 +466,6 @@ export default function Gameplay() {
 
       <main className="container mx-auto px-4 py-12 space-y-12">
         <section className="grid gap-6 md:grid-cols-3">
-          <div className="rounded-xl border border-blue-100 bg-blue-50 px-5 py-4">
-            <p className="text-xs uppercase text-blue-600 font-semibold">연결된 지갑</p>
-            <p className="mt-2 text-sm font-mono text-gray-800">
-              {currentAccount?.address
-                ? `${currentAccount.address.slice(0, 6)}...${currentAccount.address.slice(-4)}`
-                : '지갑 미연결'}
-            </p>
-          </div>
           <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-5 py-4">
             <p className="text-xs uppercase text-emerald-600 font-semibold">보유한 Swimmer</p>
             <p className="mt-2 text-2xl font-bold text-emerald-700">{swimmers.length}</p>
@@ -319,11 +475,26 @@ export default function Gameplay() {
             <p className="mt-2 text-sm text-gray-800">{packageId ? '✅ 준비 완료' : '배포 필요'}</p>
             {packageId && <p className="mt-1 text-xs font-mono text-gray-500 break-all">{packageId}</p>}
           </div>
+          <div className="rounded-xl border border-indigo-100 bg-indigo-50 px-5 py-4">
+            <p className="text-xs uppercase text-indigo-600 font-semibold">빠른 시작</p>
+            <Button 
+              onClick={handleMintFromTemplate}
+              disabled={!currentAccount || isLoading}
+              size="sm"
+              className="mt-2 w-full"
+              variant="default"
+            >
+              {isLoading ? '처리중...' : 'Mint Swimmer from Template'}
+            </Button>
+          </div>
         </section>
 
         <section className="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-6">
           <DeployContract onPackageDeployed={setPackageId} />
-          <CodeEditor onMint={handleMintSwimmer} disabled={!packageId || !currentAccount || isLoading} />
+          <CodeEditor 
+            onCompileAndDeploy={handleCompileAndDeploy} 
+            disabled={!currentAccount || isLoading} 
+          />
         </section>
 
         <section className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
