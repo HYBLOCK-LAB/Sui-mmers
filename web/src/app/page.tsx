@@ -1,28 +1,5 @@
-'use client';
-
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
-import { WalletConnect } from '@/components/WalletConnect';
-import { SuiService } from '@/lib/services/suiService';
 import { Button } from '@/components/ui/button';
-import { LESSONS } from '@/lib/lessons';
-
-const FIRST_LESSON = LESSONS[1];
-const FIRST_CHAPTER = FIRST_LESSON.chapters[0];
-
-const LESSON_GUIDE = `## Preparation
-- Connect your wallet and switch to the Sui testnet.
-- Deploy the practice package once inside the gameplay console - you can reuse it here.
-
-## Learning flow
-- Lesson 1 builds the Swimmer object and the lazy progress system.
-- Lesson 2 introduces TunaCan items and PTBs.
-- Lesson 3 shares a global registry so everyone can track swimmers.
-
-## Next steps
-- Jump into the gameplay console to rehearse each action inside a PTB.
-- Extend the Move modules with your own ideas once you feel comfortable.`;
 
 export default function Home() {
   return (
