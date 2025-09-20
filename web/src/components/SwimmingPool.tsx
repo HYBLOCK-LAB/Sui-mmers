@@ -30,21 +30,38 @@ export function SwimmingPool({
   packageId,
   currentAccount
 }: SwimmingPoolProps) {
-  const [selectedColor, setSelectedColor] = useState<number>(200) // 기본 색상 (하늘색)
-  const [recoloredImages, setRecoloredImages] = useState<Map<string, string>>(new Map())
+  const [colorPickerOpen, setColorPickerOpen] = useState(false)
+  const [selectedColor, setSelectedColor] = useState({ r: 255, g: 0, b: 0 })
   const canvasRef = useRef<HTMLCanvasElement>(null)
-
-  // 색상 옵션들
-  const colorOptions = [
-    { name: '파란색', hue: 200, color: '#3B82F6' },
-    { name: '하늘색', hue: 180, color: '#06B6D4' },
-    { name: '초록색', hue: 120, color: '#10B981' },
-    { name: '노란색', hue: 60, color: '#F59E0B' },
-    { name: '빨간색', hue: 0, color: '#EF4444' },
-    { name: '보라색', hue: 270, color: '#8B5CF6' },
-    { name: '분홍색', hue: 330, color: '#EC4899' },
-    { name: '주황색', hue: 30, color: '#F97316' },
-  ]
+  const originalImageRef = useRef<HTMLImageElement | null>(null)
+  const [recoloredImages, setRecoloredImages] = useState<Map<string, string>>(new Map())
+  
+  // 애니메이션 상태
+  const [animationFrame, setAnimationFrame] = useState(0)
+  const animationRef = useRef<NodeJS.Timeout | null>(null)
+  
+  // 애니메이션 프레임 시퀀스: 1-2-3-2-1-2-3-2-...
+  const animationSequence = [1, 2, 3, 2]
+  
+  // 현재 애니메이션 프레임 가져오기
+  const getCurrentFrame = () => {
+    return animationSequence[animationFrame % animationSequence.length]
+  }
+  
+  // 방향에 따른 이미지 경로 생성
+  const getSwimmerImagePath = (frame: number, direction: 'right' | 'left' = 'right') => {
+    if (direction === 'left') {
+      return `/images/mint_flipped(${frame}).png`
+    }
+    return `/images/mint(${frame}).png`
+  }
+  
+  // 수영 선수의 이동 방향 감지 (단순화된 버전)
+  const getSwimmerDirection = (swimmer: SwimmerSummary, index: number): 'right' | 'left' => {
+    // 실제로는 이전 위치와 현재 위치를 비교해서 방향을 결정해야 하지만
+    // 간단하게 인덱스에 따라 방향을 번갈아 설정
+    return index % 2 === 0 ? 'right' : 'left'
+  }
 
   // 이미지 색상 변경 함수들
   const rgbToHsl = (r: number, g: number, b: number) => {
@@ -138,24 +155,52 @@ export function SwimmingPool({
     return canvas.toDataURL();
   }
 
-  // 색상 변경 시 이미지 재생성
-  useEffect(() => {
-    const loadAndRecolorImage = async () => {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => {
-        const recoloredDataUrl = recolorImageByHue(img, selectedColor);
-        if (recoloredDataUrl) {
-          const newImages = new Map(recoloredImages);
-          newImages.set('swimmer', recoloredDataUrl);
-          setRecoloredImages(newImages);
-        }
-      };
-      img.src = '/images/mint.png';
-    };
+  // RGB 색상을 Hue로 변환하는 함수
+  const rgbToHue = (r: number, g: number, b: number) => {
+    const hsl = rgbToHsl(r, g, b);
+    return hsl[0];
+  }
 
-    loadAndRecolorImage();
-  }, [selectedColor]);
+  // 애니메이션 타이머 설정
+  useEffect(() => {
+    // 200ms 간격으로 애니메이션 프레임 변경
+    animationRef.current = setInterval(() => {
+      setAnimationFrame(prev => prev + 1)
+    }, 200)
+
+    return () => {
+      if (animationRef.current) {
+        clearInterval(animationRef.current)
+      }
+    }
+  }, [])
+
+  // 색상 변경 시 모든 애니메이션 프레임 이미지 재생성
+  useEffect(() => {
+    const loadAndRecolorAllFrames = async () => {
+      const hue = rgbToHue(selectedColor.r, selectedColor.g, selectedColor.b)
+      const newImages = new Map(recoloredImages)
+      
+      // 각 방향과 프레임에 대해 색상 재적용
+      const directions: ('right' | 'left')[] = ['right', 'left']
+      for (const direction of directions) {
+        for (const frame of animationSequence) {
+          const img = new Image()
+          img.crossOrigin = 'anonymous'
+          img.onload = () => {
+            const recoloredDataUrl = recolorImageByHue(img, hue)
+            if (recoloredDataUrl) {
+              newImages.set(`swimmer-${direction}-frame-${frame}`, recoloredDataUrl)
+              setRecoloredImages(new Map(newImages))
+            }
+          }
+          img.src = getSwimmerImagePath(frame, direction)
+        }
+      }
+    }
+
+    loadAndRecolorAllFrames()
+  }, [selectedColor])
 
   const maxDistance = useMemo(() => {
     if (swimmers.length === 0) return 0
@@ -204,7 +249,7 @@ export function SwimmingPool({
           <div className="relative flex items-center justify-center h-full">
             <div className="text-center bg-white/80 rounded-lg p-6">
               <img 
-                src={recoloredImages.get('swimmer') || '/images/mint.png'} 
+                src={recoloredImages.get(`swimmer-right-frame-${getCurrentFrame()}`) || `/images/mint(${getCurrentFrame()}).png`} 
                 alt="Swimmer" 
                 className="w-16 h-16 mx-auto mb-4" 
               />
@@ -271,32 +316,38 @@ export function SwimmingPool({
         
         {/* 수영 선수들 */}
         <div className="relative h-full">
-          {swimmers.map((swimmer, index) => (
-            <div
-              key={swimmer.id}
-              className="absolute flex items-center"
-              style={{
-                top: `${(index * 60) + 20}px`,
-                left: getPosition(swimmer.distanceTraveled),
-                transition: 'left 1.5s ease-out',
-              }}
-            >
-              <img 
-                src={recoloredImages.get('swimmer') || '/images/mint.png'} 
-                alt="Swimmer" 
-                className="w-12 h-12" 
-              />
-              <div className="ml-3 bg-white/90 rounded-lg px-3 py-1 shadow">
-                <div className="font-bold text-sm">{swimmer.name}</div>
-                <div className="text-xs text-gray-600">
-                  {swimmer.species}
-                </div>
-                <div className="text-xs text-blue-600">
-                  총 이동 {swimmer.distanceTraveled}m
+          {swimmers.map((swimmer, index) => {
+            const currentFrame = getCurrentFrame()
+            const direction = getSwimmerDirection(swimmer, index)
+            const frameImage = recoloredImages.get(`swimmer-${direction}-frame-${currentFrame}`) || getSwimmerImagePath(currentFrame, direction)
+            
+            return (
+              <div
+                key={swimmer.id}
+                className="absolute flex items-center"
+                style={{
+                  top: `${(index * 60) + 20}px`,
+                  left: getPosition(swimmer.distanceTraveled),
+                  transition: 'left 1.5s ease-out',
+                }}
+              >
+                <img 
+                  src={frameImage} 
+                  alt="Swimmer" 
+                  className="w-12 h-12" 
+                />
+                <div className="ml-3 bg-white/90 rounded-lg px-3 py-1 shadow">
+                  <div className="font-bold text-sm">{swimmer.name}</div>
+                  <div className="text-xs text-gray-600">
+                    {swimmer.species}
+                  </div>
+                  <div className="text-xs text-blue-600">
+                    총 이동 {swimmer.distanceTraveled}m
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
         
         {/* 능력치 표시 */}
@@ -371,28 +422,51 @@ export function SwimmingPool({
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">수영모 색상</label>
-            <select
-              value={selectedColor}
-              onChange={(event) => setSelectedColor(Number(event.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-            >
-              {colorOptions.map((color) => (
-                <option key={color.hue} value={color.hue}>
-                  {color.name}
-                </option>
-              ))}
-            </select>
-            <div className="mt-1 flex gap-1">
-              {colorOptions.slice(0, 4).map((color) => (
-                <div
-                  key={color.hue}
-                  className="w-4 h-4 rounded-full border border-gray-300 cursor-pointer"
-                  style={{ backgroundColor: color.color }}
-                  onClick={() => setSelectedColor(color.hue)}
-                  title={color.name}
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">수영모 색상 (RGB)</label>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs w-4">R</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="255"
+                  value={selectedColor.r}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSelectedColor(prev => ({ ...prev, r: Number(e.target.value) }))}
+                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                 />
-              ))}
+                <span className="text-xs w-8 text-center">{selectedColor.r}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs w-4">G</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="255"
+                  value={selectedColor.g}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSelectedColor(prev => ({ ...prev, g: Number(e.target.value) }))}
+                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                />
+                <span className="text-xs w-8 text-center">{selectedColor.g}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs w-4">B</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="255"
+                  value={selectedColor.b}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSelectedColor(prev => ({ ...prev, b: Number(e.target.value) }))}
+                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                />
+                <span className="text-xs w-8 text-center">{selectedColor.b}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs">미리보기:</span>
+                <div
+                  className="w-6 h-6 rounded border border-gray-300"
+                  style={{ backgroundColor: `rgb(${selectedColor.r}, ${selectedColor.g}, ${selectedColor.b})` }}
+                ></div>
+              </div>
             </div>
           </div>
         </div>
