@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState, useRef, useEffect } from 'react'
 import { SwimmerSummary, TunaCanItem } from '@/lib/types/swimmer'
 
 interface SwimmingPoolProps {
@@ -30,6 +30,178 @@ export function SwimmingPool({
   packageId,
   currentAccount
 }: SwimmingPoolProps) {
+  const [colorPickerOpen, setColorPickerOpen] = useState(false)
+  const [selectedColor, setSelectedColor] = useState({ r: 255, g: 0, b: 0 })
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const originalImageRef = useRef<HTMLImageElement | null>(null)
+  const [recoloredImages, setRecoloredImages] = useState<Map<string, string>>(new Map())
+  
+  // 애니메이션 상태
+  const [animationFrame, setAnimationFrame] = useState(0)
+  const animationRef = useRef<NodeJS.Timeout | null>(null)
+  
+  // 애니메이션 프레임 시퀀스: 1-2-3-2-1-2-3-2-...
+  const animationSequence = [1, 2, 3, 2]
+  
+  // 현재 애니메이션 프레임 가져오기
+  const getCurrentFrame = () => {
+    return animationSequence[animationFrame % animationSequence.length]
+  }
+  
+  // 방향에 따른 이미지 경로 생성
+  const getSwimmerImagePath = (frame: number, direction: 'right' | 'left' = 'right') => {
+    if (direction === 'left') {
+      return `/images/mint_flipped(${frame}).png`
+    }
+    return `/images/mint(${frame}).png`
+  }
+  
+  // 수영 선수의 이동 방향 감지 (단순화된 버전)
+  const getSwimmerDirection = (swimmer: SwimmerSummary, index: number): 'right' | 'left' => {
+    // 실제로는 이전 위치와 현재 위치를 비교해서 방향을 결정해야 하지만
+    // 간단하게 인덱스에 따라 방향을 번갈아 설정
+    return index % 2 === 0 ? 'right' : 'left'
+  }
+
+  // 이미지 색상 변경 함수들
+  const rgbToHsl = (r: number, g: number, b: number) => {
+    r /= 255, g /= 255, b /= 255;
+    let max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h: number, s: number, l = (max + min) / 2;
+    if (max === min) {
+      h = s = 0;
+    } else {
+      let d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      switch (max) {
+        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+        case g: h = (b - r) / d + 2; break;
+        case b: h = (r - g) / d + 4; break;
+        default: h = 0;
+      }
+      h /= 6;
+    }
+    return [h * 360, s, l];
+  }
+
+  const hslToRgb = (h: number, s: number, l: number) => {
+    let r: number, g: number, b: number;
+    h /= 360;
+    if (s === 0) {
+      r = g = b = l;
+    } else {
+      const hue2rgb = (p: number, q: number, t: number) => {
+        if (t < 0) t += 1;
+        if (t > 1) t -= 1;
+        if (t < 1 / 6) return p + (q - p) * 6 * t;
+        if (t < 1 / 2) return q;
+        if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+        return p;
+      };
+      let q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+      let p = 2 * l - q;
+      r = hue2rgb(p, q, h + 1 / 3);
+      g = hue2rgb(p, q, h);
+      b = hue2rgb(p, q, h - 1 / 3);
+    }
+    return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+  }
+
+  const recolorImageByHue = (image: HTMLImageElement, newHue: number) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return null;
+    
+    canvas.width = image.width;
+    canvas.height = image.height;
+
+    // 1. 캔버스에 원본 이미지 그리기
+    ctx.drawImage(image, 0, 0);
+
+    // 2. 픽셀 데이터 가져오기
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+
+    // 3. 사용자가 지정한 원본 색상 Hue 범위 (파란색/하늘색 범위)
+    const sourceHueMin = 180; // 하늘색
+    const sourceHueMax = 220; // 파란색
+
+    // 4. 모든 픽셀을 순회하며 조건 확인 및 변경
+    for (let i = 0; i < data.length; i += 4) {
+      // 투명 픽셀은 건너뛰기
+      if (data[i + 3] === 0) continue;
+
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+
+      const hsl = rgbToHsl(r, g, b);
+      const hue = hsl[0];
+
+      // 현재 픽셀의 Hue가 지정한 범위(180~220) 안에 있는지 확인
+      if (hue >= sourceHueMin && hue <= sourceHueMax) {
+        // 새로운 Hue와 원본의 채도(S), 명도(L)를 사용해 새 RGB 값을 계산
+        const newRgb = hslToRgb(newHue, hsl[1], hsl[2]);
+        
+        // 픽셀 데이터 교체
+        data[i] = newRgb[0];     // Red
+        data[i + 1] = newRgb[1]; // Green
+        data[i + 2] = newRgb[2]; // Blue
+      }
+    }
+
+    // 5. 수정된 픽셀 데이터를 캔버스에 다시 그리기
+    ctx.putImageData(imageData, 0, 0);
+    return canvas.toDataURL();
+  }
+
+  // RGB 색상을 Hue로 변환하는 함수
+  const rgbToHue = (r: number, g: number, b: number) => {
+    const hsl = rgbToHsl(r, g, b);
+    return hsl[0];
+  }
+
+  // 애니메이션 타이머 설정
+  useEffect(() => {
+    // 200ms 간격으로 애니메이션 프레임 변경
+    animationRef.current = setInterval(() => {
+      setAnimationFrame(prev => prev + 1)
+    }, 200)
+
+    return () => {
+      if (animationRef.current) {
+        clearInterval(animationRef.current)
+      }
+    }
+  }, [])
+
+  // 색상 변경 시 모든 애니메이션 프레임 이미지 재생성
+  useEffect(() => {
+    const loadAndRecolorAllFrames = async () => {
+      const hue = rgbToHue(selectedColor.r, selectedColor.g, selectedColor.b)
+      const newImages = new Map(recoloredImages)
+      
+      // 각 방향과 프레임에 대해 색상 재적용
+      const directions: ('right' | 'left')[] = ['right', 'left']
+      for (const direction of directions) {
+        for (const frame of animationSequence) {
+          const img = new Image()
+          img.crossOrigin = 'anonymous'
+          img.onload = () => {
+            const recoloredDataUrl = recolorImageByHue(img, hue)
+            if (recoloredDataUrl) {
+              newImages.set(`swimmer-${direction}-frame-${frame}`, recoloredDataUrl)
+              setRecoloredImages(new Map(newImages))
+            }
+          }
+          img.src = getSwimmerImagePath(frame, direction)
+        }
+      }
+    }
+
+    loadAndRecolorAllFrames()
+  }, [selectedColor])
+
   const maxDistance = useMemo(() => {
     if (swimmers.length === 0) return 0
     return swimmers.reduce((max, swimmer) => Math.max(max, swimmer.distanceTraveled), 0)
@@ -76,7 +248,11 @@ export function SwimmingPool({
           
           <div className="relative flex items-center justify-center h-full">
             <div className="text-center bg-white/80 rounded-lg p-6">
-              <img src="/images/mint.png" alt="Swimmer" className="w-16 h-16 mx-auto mb-4" />
+              <img 
+                src={recoloredImages.get(`swimmer-right-frame-${getCurrentFrame()}`) || `/images/mint(${getCurrentFrame()}).png`} 
+                alt="Swimmer" 
+                className="w-16 h-16 mx-auto mb-4" 
+              />
               <p className="text-gray-700 font-medium">
                 수영 선수를 생성하면 여기에 표시됩니다!
               </p>
@@ -140,28 +316,38 @@ export function SwimmingPool({
         
         {/* 수영 선수들 */}
         <div className="relative h-full">
-          {swimmers.map((swimmer, index) => (
-            <div
-              key={swimmer.id}
-              className="absolute flex items-center"
-              style={{
-                top: `${(index * 60) + 20}px`,
-                left: getPosition(swimmer.distanceTraveled),
-                transition: 'left 1.5s ease-out',
-              }}
-            >
-              <img src="/images/mint.png" alt="Swimmer" className="w-12 h-12" />
-              <div className="ml-3 bg-white/90 rounded-lg px-3 py-1 shadow">
-                <div className="font-bold text-sm">{swimmer.name}</div>
-                <div className="text-xs text-gray-600">
-                  {swimmer.species}
-                </div>
-                <div className="text-xs text-blue-600">
-                  총 이동 {swimmer.distanceTraveled}m
+          {swimmers.map((swimmer, index) => {
+            const currentFrame = getCurrentFrame()
+            const direction = getSwimmerDirection(swimmer, index)
+            const frameImage = recoloredImages.get(`swimmer-${direction}-frame-${currentFrame}`) || getSwimmerImagePath(currentFrame, direction)
+            
+            return (
+              <div
+                key={swimmer.id}
+                className="absolute flex items-center"
+                style={{
+                  top: `${(index * 60) + 20}px`,
+                  left: getPosition(swimmer.distanceTraveled),
+                  transition: 'left 1.5s ease-out',
+                }}
+              >
+                <img 
+                  src={frameImage} 
+                  alt="Swimmer" 
+                  className="w-12 h-12" 
+                />
+                <div className="ml-3 bg-white/90 rounded-lg px-3 py-1 shadow">
+                  <div className="font-bold text-sm">{swimmer.name}</div>
+                  <div className="text-xs text-gray-600">
+                    {swimmer.species}
+                  </div>
+                  <div className="text-xs text-blue-600">
+                    총 이동 {swimmer.distanceTraveled}m
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
         
         {/* 능력치 표시 */}
@@ -186,7 +372,7 @@ export function SwimmingPool({
           <span className="text-xs text-gray-500">인벤토리 {tunaCans.length}개</span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Swimmer 선택</label>
             <select
@@ -233,6 +419,55 @@ export function SwimmingPool({
             {selectedTuna && (
               <p className="mt-1 text-xs text-gray-500">보너스 거리 +{selectedTuna.energy}m</p>
             )}
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">수영모 색상 (RGB)</label>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs w-4">R</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="255"
+                  value={selectedColor.r}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSelectedColor(prev => ({ ...prev, r: Number(e.target.value) }))}
+                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                />
+                <span className="text-xs w-8 text-center">{selectedColor.r}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs w-4">G</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="255"
+                  value={selectedColor.g}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSelectedColor(prev => ({ ...prev, g: Number(e.target.value) }))}
+                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                />
+                <span className="text-xs w-8 text-center">{selectedColor.g}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs w-4">B</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="255"
+                  value={selectedColor.b}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSelectedColor(prev => ({ ...prev, b: Number(e.target.value) }))}
+                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                />
+                <span className="text-xs w-8 text-center">{selectedColor.b}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs">미리보기:</span>
+                <div
+                  className="w-6 h-6 rounded border border-gray-300"
+                  style={{ backgroundColor: `rgb(${selectedColor.r}, ${selectedColor.g}, ${selectedColor.b})` }}
+                ></div>
+              </div>
+            </div>
           </div>
         </div>
 

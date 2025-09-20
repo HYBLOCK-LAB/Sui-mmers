@@ -1,24 +1,32 @@
-﻿import { useMemo, useState, useEffect } from 'react'
-import dynamic from 'next/dynamic'
-import { DEFAULT_VALUES } from '@/src/contracts/moveTemplates'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { ApiMoveCompiler } from '@/lib/services/apiMoveCompiler'
+import { useEffect, useMemo, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
+import type { editor as MonacoEditor } from 'monaco-editor';
+import { DEFAULT_VALUES } from '@/src/contracts/moveTemplates';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { ApiMoveCompiler } from '@/lib/services/apiMoveCompiler';
 
 const Editor = dynamic(() => import('@monaco-editor/react'), {
   ssr: false,
   loading: () => (
-    <div className="flex items-center justify-center h-full bg-gray-50 text-gray-600">
-      Loading editor...
-    </div>
+    <div className="flex h-full items-center justify-center bg-gray-50 text-gray-600">Loading editor...</div>
   ),
-})
+});
+
+const DiffEditor = dynamic(() => import('@monaco-editor/react').then((mod) => mod.DiffEditor), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-full items-center justify-center bg-gray-50 text-gray-600">Preparing diff...</div>
+  ),
+});
 
 interface CodeEditorProps {
-  onMint?: (name: string, species: string) => void | Promise<void>
-  onCompileAndDeploy?: (transaction: any) => void | Promise<void>
-  disabled?: boolean
-  codeTemplate?: string
+  onMint?: (name: string, species: string) => void | Promise<void>;
+  onCompileAndDeploy?: (transaction: any) => void | Promise<void>;
+  disabled?: boolean;
+  codeTemplate?: string;
+  codeSkeletone?: string;
+  readOnly?: boolean;
 }
 
 const FALLBACK_TEMPLATE = `module sui_mmers::example {
@@ -28,177 +36,293 @@ const FALLBACK_TEMPLATE = `module sui_mmers::example {
         id: UID,
         distance_traveled: u64,
     }
-}`
+}`;
 
-export function CodeEditor({ onMint, onCompileAndDeploy, disabled, codeTemplate }: CodeEditorProps) {
-  const [isDeploying, setIsDeploying] = useState(false)
-  const [currentCode, setCurrentCode] = useState('')
-  const [validationErrors, setValidationErrors] = useState<string[]>([])
-  const [name] = useState('My Swimmer')
-  const [species] = useState('Pacific Orca')
-  const [baseSpeed] = useState(DEFAULT_VALUES.baseSpeedPerHour)
-  const [tunaBonus] = useState(DEFAULT_VALUES.tunaBonus)
+const normalize = (input: string): string =>
+  input
+    .replace(/\r\n/g, '\n')
+    .split('\n')
+    .map((line) => line.replace(/\s+$/g, ''))
+    .join('\n')
+    .trim();
 
-  const processedCode = useMemo(() => {
-    const template = codeTemplate ?? ApiMoveCompiler.getSwimmerMoveTemplate()
-    return template
+export function CodeEditor({ onMint, onCompileAndDeploy, disabled, codeTemplate, codeSkeletone, readOnly = false }: CodeEditorProps) {
+  const [isDeploying, setIsDeploying] = useState(false);
+  const [name] = useState('My Swimmer');
+  const [species] = useState('Pacific Orca');
+  const [baseSpeed] = useState(DEFAULT_VALUES.baseSpeedPerHour);
+  const [tunaBonus] = useState(DEFAULT_VALUES.tunaBonus);
+
+  const editorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(null);
+  const hintDiffDisposablesRef = useRef<Array<{ dispose: () => void }>>([]);
+
+  const processCode = (code?: string) =>
+    (code ?? FALLBACK_TEMPLATE)
       .replace(/{{BASE_SPEED_PER_HOUR}}/g, baseSpeed.toString())
-      .replace(/{{TUNA_BONUS}}/g, tunaBonus.toString())
-  }, [codeTemplate, baseSpeed, tunaBonus])
+      .replace(/{{TUNA_BONUS}}/g, tunaBonus.toString());
 
-  // Initialize currentCode when template changes
+  const solutionCode = useMemo(() => processCode(codeTemplate), [codeTemplate, baseSpeed, tunaBonus]);
+  const skeletonCode = useMemo(
+    () => processCode(codeSkeletone ?? codeTemplate),
+    [codeSkeletone, codeTemplate, baseSpeed, tunaBonus]
+  );
+
+  const hasChecker = Boolean(codeTemplate && codeSkeletone);
+
+  const [code, setCode] = useState(() => (hasChecker ? skeletonCode : solutionCode));
+  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [showSolution, setShowSolution] = useState(false);
+  const [showHint, setShowHint] = useState(false);
+  const [isEditorReady, setIsEditorReady] = useState(!hasChecker);
+  const [isDiffReady, setIsDiffReady] = useState(false);
+
   useEffect(() => {
-    setCurrentCode(processedCode)
-    validateCode(processedCode)
-  }, [processedCode])
+    if (hasChecker) {
+      setCode(skeletonCode);
+      setStatus('idle');
+      setShowSolution(false);
+      setShowHint(false);
+      setIsEditorReady(false);
+      setIsDiffReady(false);
+    }
+  }, [hasChecker, skeletonCode]);
 
-  // Validate Move code structure with real-time feedback
-  const validateCode = (code: string) => {
-    const errors: string[] = []
-    const warnings: string[] = []
-    
-    // Check for required module declaration
-    if (!code.includes('module swimming::swimmer')) {
-      errors.push('Module must be named "swimming::swimmer"')
+  useEffect(() => {
+    if (showSolution) {
+      setShowHint(false);
+      setIsDiffReady(false);
+    } else if (hasChecker) {
+      setIsEditorReady(false);
     }
-    
-    // Check for required imports
-    const requiredImports = [
-      'use sui::object',
-      'use sui::transfer',
-      'use sui::tx_context',
-      'use std::string'
-    ]
-    
-    requiredImports.forEach(imp => {
-      if (!code.includes(imp)) {
-        warnings.push(`Missing recommended import: ${imp}`)
-      }
-    })
-    
-    // Check for required structs
-    if (!code.includes('public struct Swimmer has key')) {
-      errors.push('Missing required "Swimmer" struct with key ability')
+  }, [showSolution, hasChecker]);
+
+  useEffect(() => {
+    if (!showHint) {
+      hintDiffDisposablesRef.current.forEach((disposable) => disposable.dispose());
+      hintDiffDisposablesRef.current = [];
     }
-    
-    // Check for required entry functions
-    const requiredFunctions = [
-      { pattern: 'public entry fun mint_swimmer', name: 'mint_swimmer' },
-    ]
-    
-    requiredFunctions.forEach(func => {
-      if (!code.includes(func.pattern)) {
-        errors.push(`Missing required function: ${func.name}`)
-      }
-    })
-    
-    // Check for required fields in Swimmer struct
-    if (code.includes('struct Swimmer')) {
-      const swimmerMatch = code.match(/struct Swimmer[^{]*\{([^}]*)\}/s)
-      if (swimmerMatch) {
-        const swimmerBody = swimmerMatch[1]
-        const requiredFields = [
-          { field: 'id: UID', name: 'id' },
-          { field: 'name: String', name: 'name' },
-          { field: 'distance_traveled: u64', name: 'distance_traveled' }
-        ]
-        requiredFields.forEach(fieldDef => {
-          if (!swimmerBody.includes(fieldDef.field)) {
-            errors.push(`Swimmer struct missing required field: ${fieldDef.name}`)
-          }
-        })
-      }
-    }
-    
-    // Check for proper function parameters in mint_swimmer
-    const mintFuncMatch = code.match(/public entry fun mint_swimmer\s*\(([^)]*)\)/s)
-    if (mintFuncMatch) {
-      const params = mintFuncMatch[1]
-      if (!params.includes('name:') || !params.includes('vector<u8>')) {
-        warnings.push('mint_swimmer should accept name as vector<u8>')
-      }
-      if (!params.includes('species:') || !params.includes('vector<u8>')) {
-        warnings.push('mint_swimmer should accept species as vector<u8>')
-      }
-      if (!params.includes('ctx:') || !params.includes('&mut TxContext')) {
-        errors.push('mint_swimmer must have ctx: &mut TxContext parameter')
-      }
-    }
-    
-    setValidationErrors([...errors, ...warnings])
-  }
+  }, [showHint]);
+
+  useEffect(
+    () => () => {
+      hintDiffDisposablesRef.current.forEach((disposable) => disposable.dispose());
+      hintDiffDisposablesRef.current = [];
+    },
+    []
+  );
+
+  const handleEditorMount = (editor: MonacoEditor.IStandaloneCodeEditor) => {
+    editorRef.current = editor;
+    setIsEditorReady(true);
+  };
+
+  const handleHintDiffEditorMount = (diffEditor: any) => {
+    const originalEditor = diffEditor.getOriginalEditor();
+    const modifiedEditor = diffEditor.getModifiedEditor();
+
+    hintDiffDisposablesRef.current.forEach((disposable) => disposable.dispose());
+    hintDiffDisposablesRef.current = [];
+
+    modifiedEditor.updateOptions({ readOnly: true, lineNumbers: 'off' });
+    originalEditor.updateOptions({ readOnly: false, lineNumbers: 'on' });
+
+    const listener = originalEditor.onDidChangeModelContent(() => {
+      const value = originalEditor.getValue();
+      setCode(value);
+    });
+
+    hintDiffDisposablesRef.current.push(listener);
+    editorRef.current = originalEditor;
+    setIsEditorReady(true);
+  };
+
+  const handleDiffEditorMount = (editor: any) => {
+    const originalEditor = editor.getOriginalEditor();
+    const modifiedEditor = editor.getModifiedEditor();
+    originalEditor.updateOptions({ lineNumbers: 'off' });
+    modifiedEditor.updateOptions({ lineNumbers: 'on' });
+    setIsDiffReady(true);
+  };
 
   const handleDeploy = async () => {
-    setIsDeploying(true)
+    setIsDeploying(true);
     try {
       // If onCompileAndDeploy is provided, use compilation flow
       if (onCompileAndDeploy) {
-        console.log('Compiling Move code...')
-        const transaction = await ApiMoveCompiler.createDeployTransaction('swimmer', currentCode)
-        await onCompileAndDeploy(transaction)
+        console.log('Compiling Move code...');
+        const currentCode = editorRef.current?.getValue() || solutionCode;
+        const transaction = await ApiMoveCompiler.createDeployTransaction('swimmer', currentCode);
+        await onCompileAndDeploy(transaction);
       } 
       // Fallback to old mint flow
       else if (onMint) {
-        await onMint(name, species)
+        await onMint(name, species);
       }
     } catch (error) {
-      console.error('Deploy failed:', error)
-      alert('Deployment failed: ' + (error as Error).message)
+      console.error('Deploy failed:', error);
+      alert('Deployment failed: ' + (error as Error).message);
     } finally {
-      setIsDeploying(false)
+      setIsDeploying(false);
     }
-  }
+  };
+
+  const handleCodeChange = (value?: string) => {
+    setCode(value ?? '');
+    if (status !== 'idle') {
+      setStatus('idle');
+      setShowHint(false);
+    }
+  };
+
+  const handleCheckAnswer = () => {
+    if (normalize(code) === normalize(solutionCode)) {
+      setStatus('success');
+      setShowSolution(false);
+      setShowHint(false);
+    } else {
+      setStatus('error');
+    }
+  };
+
+  const handleToggleHint = () => {
+    if (!showHint) {
+      setShowSolution(false);
+      setIsEditorReady(false);
+    }
+    setShowHint((prev) => !prev);
+  };
+
+  const handleShowSolution = () => {
+    setShowHint(false);
+    setShowSolution(true);
+  };
+
+  const handleDiffEditorBeforeMount = () => {
+    setIsDiffReady(false);
+  };
 
   return (
-    <Card className="flex flex-col flex-1 h-full">
+    <Card className="flex h-full flex-1 flex-col">
       <CardHeader>
         <CardTitle>Code Playground</CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 min-h-[320px] space-y-2">
-        {validationErrors.length > 0 && (
-          <div className="bg-red-50 border border-red-200 rounded-md p-3">
-            <p className="text-sm font-medium text-red-800 mb-1">Validation Errors:</p>
-            <ul className="text-xs text-red-700 space-y-1">
-              {validationErrors.map((error, i) => (
-                <li key={i}>• {error}</li>
-              ))}
-            </ul>
-          </div>
+      <CardContent className="min-h-[320px] flex-1">
+        {hasChecker ? (
+          showSolution ? (
+            <DiffEditor
+              original={code}
+              modified={solutionCode}
+              language="rust"
+              beforeMount={handleDiffEditorBeforeMount}
+              onMount={handleDiffEditorMount}
+              options={{
+                readOnly: true,
+                renderIndicators: true,
+                minimap: { enabled: false },
+                renderSideBySide: false,
+                originalEditable: false,
+                enableSplitViewResizing: false,
+              }}
+            />
+          ) : showHint ? (
+            <DiffEditor
+              original={code}
+              modified={solutionCode}
+              language="rust"
+              beforeMount={() => setIsEditorReady(false)}
+              onMount={handleHintDiffEditorMount}
+              options={{
+                readOnly: false,
+                renderIndicators: true,
+                minimap: { enabled: false },
+                renderSideBySide: false,
+                originalEditable: true,
+                enableSplitViewResizing: false,
+              }}
+            />
+          ) : (
+            <Editor
+              defaultLanguage="rust"
+              value={code}
+              theme="vs-light"
+              onChange={handleCodeChange}
+              onMount={handleEditorMount}
+              options={{
+                minimap: { enabled: false },
+                fontSize: 14,
+                readOnly,
+                wordWrap: 'on',
+                lineNumbers: 'on',
+                scrollBeyondLastLine: false,
+                automaticLayout: true,
+              }}
+            />
+          )
+        ) : (
+          <Editor
+            defaultLanguage="rust"
+            defaultValue={solutionCode}
+            theme="vs-light"
+            onMount={handleEditorMount}
+            options={{
+              minimap: { enabled: false },
+              fontSize: 14,
+              readOnly,
+              wordWrap: 'on',
+              lineNumbers: 'on',
+              scrollBeyondLastLine: false,
+              automaticLayout: true,
+            }}
+          />
         )}
-        <Editor
-          defaultLanguage="rust"
-          value={processedCode}
-          onChange={(value) => {
-            const newValue = value || ''
-            setCurrentCode(newValue)
-            validateCode(newValue)
-          }}
-          theme="vs-light"
-          options={{
-            minimap: { enabled: false },
-            fontSize: 14,
-            readOnly: !(onMint || onCompileAndDeploy),
-            wordWrap: 'on',
-            lineNumbers: 'on',
-            scrollBeyondLastLine: false,
-            automaticLayout: true,
-          }}
-        />
       </CardContent>
-      {(onMint || onCompileAndDeploy) && (
-        <CardFooter className="justify-end">
-          <Button
-            onClick={handleDeploy}
-            disabled={disabled || isDeploying || validationErrors.length > 0}
-            size="lg"
-            className="w-full"
-          >
-            {isDeploying ? 'Compiling & Deploying...' : 
-             validationErrors.length > 0 ? 'Fix Validation Errors First' : 
-             'Compile & Deploy Swimmer'}
-          </Button>
+      {hasChecker ? (
+        <CardFooter className="flex flex-col gap-3">
+          <div className="text-sm">
+            {status === 'success' ? (
+              <span className="text-emerald-600">Great job! Your solution matches the reference implementation.</span>
+            ) : status === 'error' ? (
+              <span className="text-red-600">Not quite there yet. Compare with the reference or keep iterating.</span>
+            ) : (
+              <span className="text-gray-600">
+                Fill in the missing pieces, then check your answer when you are ready.
+              </span>
+            )}
+          </div>
+          <div className="flex flex-wrap justify-end gap-2">
+            {status !== 'success' && !showSolution && (
+              <Button onClick={handleCheckAnswer} disabled={!isEditorReady}>
+                Check answer
+              </Button>
+            )}
+            {status === 'error' && !showSolution && (
+              <>
+                <Button variant="outline" onClick={handleToggleHint} disabled={!isEditorReady}>
+                  {showHint ? 'Hide hint' : 'Show hint'}
+                </Button>
+                <Button variant="secondary" onClick={handleShowSolution} disabled={!isEditorReady}>
+                  Show solution
+                </Button>
+              </>
+            )}
+            {showSolution && (
+              <Button variant="outline" onClick={() => setShowSolution(false)} disabled={!isDiffReady}>
+                Back to editor
+              </Button>
+            )}
+          </div>
         </CardFooter>
+      ) : (
+        (onMint || onCompileAndDeploy) && (
+          <CardFooter className="justify-end">
+            <Button onClick={handleDeploy} disabled={disabled || isDeploying} size="lg" className="w-full">
+              {isDeploying ? 'Processing...' : 
+               onCompileAndDeploy ? 'Compile & Deploy Swimmer' : 
+               'Mint Swimmer from Template'}
+            </Button>
+          </CardFooter>
+        )
       )}
     </Card>
-  )
+  );
 }

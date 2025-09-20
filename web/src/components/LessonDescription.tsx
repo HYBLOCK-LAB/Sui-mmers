@@ -69,19 +69,58 @@ function parseMarkdown(markdown: string): MarkdownBlock[] {
   return blocks;
 }
 
-const renderInline = (text: string, keyPrefix: string): ReactNode[] => {
-  const parts = text.split(/`([^`]+)`/g);
-  return parts.map((part, index) => {
-    const key = `${keyPrefix}-${index}`;
-    if (index % 2 === 1) {
-      return (
-        <code key={key} className="rounded bg-gray-100 px-1 py-0.5 font-mono text-xs text-gray-700">
-          {part}
-        </code>
-      );
+const renderInline = (text: string, keyPrefix: string): ReactNode => {
+  const parts = text.split(/(`[^`]*`)/g);
+  let sequence = 0;
+
+  const renderEmphasis = (segment: string, baseKey: string): ReactNode[] => {
+    const nodes: ReactNode[] = [];
+    const emphasisRegex = /(\*\*|__)(.+?)\1|(\*|_)(.+?)\3/g;
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+
+    while ((match = emphasisRegex.exec(segment))) {
+      if (match.index > lastIndex) {
+        nodes.push(<span key={`${baseKey}-${sequence++}`}>{segment.slice(lastIndex, match.index)}</span>);
+      }
+
+      if (match[1]) {
+        nodes.push(<strong key={`${baseKey}-${sequence++}`}>{match[2]}</strong>);
+      } else if (match[3]) {
+        nodes.push(<em key={`${baseKey}-${sequence++}`}>{match[4]}</em>);
+      }
+
+      lastIndex = emphasisRegex.lastIndex;
     }
-    return <span key={key}>{part}</span>;
-  });
+
+    if (lastIndex < segment.length) {
+      nodes.push(<span key={`${baseKey}-${sequence++}`}>{segment.slice(lastIndex)}</span>);
+    }
+
+    return nodes;
+  };
+
+  // Use map instead of flatMap, then flatten the result
+  return parts
+    .map((part, index) => {
+      const key = `${keyPrefix}-${index}`;
+
+      if (part.startsWith('`') && part.endsWith('`')) {
+        const codeContent = part.slice(1, -1);
+        return (
+          <code key={`${key}-code`} className="rounded bg-gray-100 px-1 py-0.5 font-mono text-xs text-gray-700">
+            {codeContent}
+          </code>
+        );
+      }
+
+      if (!part) {
+        return null;
+      }
+
+      return renderEmphasis(part, key);
+    })
+    .flat();
 };
 
 export function LessonDescription({ title, markdown, className }: LessonDescriptionProps) {
@@ -95,7 +134,7 @@ export function LessonDescription({ title, markdown, className }: LessonDescript
       )}
     >
       {title && <h2 className="text-xl font-semibold text-gray-900">{title}</h2>}
-      <div className={cn('space-y-4', title && 'mt-4')}>
+      <div className={cn('space-y-2', title && 'mt-4')}>
         {blocks.map((block, index) => {
           if (block.type === 'heading') {
             const HeadingTag = `h${Math.min(block.level + 1, 6)}`;

@@ -48,6 +48,29 @@ export function getNextChapter(
   return { lesson: nextLesson, chapter: nextLesson.chapters[0] };
 }
 
+export function getPreviousChapter(
+  lessonSlug: string,
+  chapterSlug: string
+): { lesson: LessonDefinition; chapter: LessonChapter } | null {
+  const current = getChapter(lessonSlug, chapterSlug);
+  if (!current) return null;
+
+  const { lesson, chapterIndex, lessonIndex } = current;
+  if (chapterIndex > 0) {
+    return { lesson, chapter: lesson.chapters[chapterIndex - 1] };
+  }
+
+  const previousLesson = LESSONS[lessonIndex - 1];
+
+  if (!previousLesson || previousLesson.chapters.length === 0) {
+    return null;
+  }
+
+  const lastChapterOfPreviousLesson = previousLesson.chapters[previousLesson.chapters.length - 1];
+
+  return { lesson: previousLesson, chapter: lastChapterOfPreviousLesson };
+}
+
 export function getLessonRoute(lessonSlug: string, chapterSlug: string): string {
   return `/lessons/${lessonSlug}/${chapterSlug}`;
 }

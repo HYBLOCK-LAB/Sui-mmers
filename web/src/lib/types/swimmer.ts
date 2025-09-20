@@ -5,6 +5,11 @@ export interface SwimmerSummary {
   distanceTraveled: number
   baseSpeedPerHour: number
   lastUpdateTimestampMs: number
+  swimCapColor?: {
+    r: number
+    g: number
+    b: number
+  }
 }
 
 export interface TunaCanItem {
