@@ -38,9 +38,6 @@ export function Sidebar({ showHeader = true, activeLessonSlug, activeChapterSlug
                         isActive ? 'bg-blue-50 text-blue-700 border-l-2 border-blue-500' : 'hover:bg-gray-100'
                       }`}
                     >
-                      <span className="text-xs font-medium text-gray-400">
-                        {(chapterIndex + 1 + lessonIndex * 10).toString().padStart(2, '0')}
-                      </span>
                       <span className="flex-1 leading-5">{chapter.title}</span>
                     </Link>
                   </li>
