@@ -51,9 +51,9 @@ export function SwimmingPool({
   // 방향에 따른 이미지 경로 생성
   const getSwimmerImagePath = (frame: number, direction: 'right' | 'left' = 'right') => {
     if (direction === 'left') {
-      return `/images/mint_flipped(${frame}).png`
+      return `/images/mint_water_flipped(${frame}).png`
     }
-    return `/images/mint(${frame}).png`
+    return `/images/mint_water(${frame}).png`
   }
   
   // 수영 선수의 이동 방향 감지 (단순화된 버전)
@@ -249,7 +249,7 @@ export function SwimmingPool({
           <div className="relative flex items-center justify-center h-full">
             <div className="text-center bg-white/80 rounded-lg p-6">
               <img 
-                src={recoloredImages.get(`swimmer-right-frame-${getCurrentFrame()}`) || `/images/mint(${getCurrentFrame()}).png`} 
+                src={recoloredImages.get(`swimmer-right-frame-${getCurrentFrame()}`) || `/images/mint_water(${getCurrentFrame()}).png`} 
                 alt="Swimmer" 
                 className="w-16 h-16 mx-auto mb-4" 
               />

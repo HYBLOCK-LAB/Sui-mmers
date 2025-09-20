@@ -105,6 +105,8 @@ export function LessonPageClient({
               markdown={markdown}
               config={deploymentConfig}
               onConfigChange={handleConfigChange}
+              lessonSlug={lessonSlug}
+              chapterSlug={chapterSlug}
             />
             <div className="space-y-4 self-start">
               <div className="flex items-center gap-2">
@@ -126,7 +128,7 @@ export function LessonPageClient({
               {workspaceTab === 'code' ? (
                 <CodeEditor codeTemplate={codeTemplate} readOnly={effectiveReadOnly} />
               ) : (
-                <DeploymentPreview config={deploymentConfig} />
+                <DeploymentPreview config={deploymentConfig} lessonSlug={lessonSlug} chapterSlug={chapterSlug} />
               )}
             </div>
           </div>
