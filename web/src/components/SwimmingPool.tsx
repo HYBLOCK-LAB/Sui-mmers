@@ -236,11 +236,11 @@ export function SwimmingPool({
     return date.toLocaleString();
   };
 
-  if (swimmers.length === 0) {
+  if (swimmers.length === 1) {
     return (
       <div className="relative">
         <div
-          className="bg-cover bg-center bg-no-repeat rounded-xl p-8 aspect-video relative overflow-hidden mb-6"
+          className="bg-cover bg-center bg-no-repeat p-8 aspect-video relative overflow-hidden mb-6"
           style={{ backgroundImage: 'url(/images/ocean_16-9.png)' }}
         >
           <div className="absolute inset-0">
@@ -272,7 +272,7 @@ export function SwimmingPool({
         </div>
 
         {/* gameplay console container */}
-        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+        <div className="bg-white border-gray-200 p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900">Gameplay Console</h3>
             <span className="text-xs text-gray-500">Tuna inventory {tunaCans.length}</span>
@@ -370,7 +370,7 @@ export function SwimmingPool({
       </div>
 
       {/* gameplay console container */}
-      <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+      <div className="mt-2">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h3 className="text-lg font-semibold text-gray-900">Gameplay Console</h3>
@@ -460,96 +460,96 @@ export function SwimmingPool({
           </div>
         </div>
 
-        <div className="mt-8 border-t border-gray-200 pt-6">
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-            <div>
-              <h4 className="text-sm font-semibold uppercase tracking-wide text-gray-700">Actions</h4>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  onClick={onUpdateProgress}
-                  disabled={!packageId || !currentAccount || !selectedSwimmerId || actionLoading === 'update'}
-                  className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {actionLoading === 'update' ? 'Updating...' : 'Update progress'}
-                </button>
-                <button
-                  onClick={onMintTuna}
-                  disabled={!packageId || !currentAccount || actionLoading === 'mintTuna'}
-                  className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {actionLoading === 'mintTuna' ? 'Minting...' : 'Mint tuna can'}
-                </button>
-                <button
-                  onClick={onEatTuna}
-                  disabled={
-                    !packageId ||
-                    !currentAccount ||
-                    !selectedSwimmerId ||
-                    !selectedTunaId ||
-                    actionLoading === 'eatTuna'
-                  }
-                  className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {actionLoading === 'eatTuna' ? 'Feeding...' : 'Feed tuna can'}
-                </button>
-              </div>
-              <p className="mt-3 text-xs text-gray-500">
-                These buttons invoke the Move entry functions update_progress, mint_tuna, and eat_tuna.
-              </p>
+        <div className="mt-8 space-y-6">
+          <div className="rounded-lg border border-gray-200 bg-white px-4 py-5 shadow-sm">
+            <h4 className="text-sm font-semibold uppercase tracking-wide text-gray-700">Mint & actions</h4>
+            <p className="mt-1 text-xs text-gray-500">
+              Trigger Move entry functions for swimmers directly from this console.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                onClick={onUpdateProgress}
+                disabled={!packageId || !currentAccount || !selectedSwimmerId || actionLoading === 'update'}
+                className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {actionLoading === 'update' ? 'Updating...' : 'Update progress'}
+              </button>
+              <button
+                onClick={onMintTuna}
+                disabled={!packageId || !currentAccount || actionLoading === 'mintTuna'}
+                className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {actionLoading === 'mintTuna' ? 'Minting...' : 'Mint tuna can'}
+              </button>
+              <button
+                onClick={onEatTuna}
+                disabled={
+                  !packageId || !currentAccount || !selectedSwimmerId || !selectedTunaId || actionLoading === 'eatTuna'
+                }
+                className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {actionLoading === 'eatTuna' ? 'Feeding...' : 'Feed tuna can'}
+              </button>
             </div>
+            <p className="mt-3 text-xs text-gray-500">
+              These buttons invoke the Move entry functions update_progress, mint_tuna, and eat_tuna.
+            </p>
+          </div>
 
-            <div>
-              <h4 className="text-sm font-semibold uppercase tracking-wide text-gray-700">Swimmer palette</h4>
-              <div className="mt-3 space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs w-4">R</span>
-                  <input
-                    type="range"
-                    min="0"
-                    max="255"
-                    value={selectedColor.r}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setSelectedColor((prev) => ({ ...prev, r: Number(e.target.value) }))
-                    }
-                    className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                  />
-                  <span className="text-xs w-8 text-center">{selectedColor.r}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs w-4">G</span>
-                  <input
-                    type="range"
-                    min="0"
-                    max="255"
-                    value={selectedColor.g}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setSelectedColor((prev) => ({ ...prev, g: Number(e.target.value) }))
-                    }
-                    className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                  />
-                  <span className="text-xs w-8 text-center">{selectedColor.g}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs w-4">B</span>
-                  <input
-                    type="range"
-                    min="0"
-                    max="255"
-                    value={selectedColor.b}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setSelectedColor((prev) => ({ ...prev, b: Number(e.target.value) }))
-                    }
-                    className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                  />
-                  <span className="text-xs w-8 text-center">{selectedColor.b}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs">Preview</span>
-                  <div
-                    className="h-6 w-6 rounded border border-gray-300"
-                    style={{ backgroundColor: `rgb(${selectedColor.r}, ${selectedColor.g}, ${selectedColor.b})` }}
-                  ></div>
-                </div>
+          <div className="rounded-lg border border-gray-200 bg-white px-4 py-5 shadow-sm">
+            <h4 className="text-sm font-semibold uppercase tracking-wide text-gray-700">Swimmer palette</h4>
+            <p className="mt-1 text-xs text-gray-500">
+              Adjust the suit color and see it applied to the preview sprites.
+            </p>
+            <div className="mt-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs w-4">R</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="255"
+                  value={selectedColor.r}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setSelectedColor((prev) => ({ ...prev, r: Number(e.target.value) }))
+                  }
+                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                />
+                <span className="text-xs w-8 text-center">{selectedColor.r}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs w-4">G</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="255"
+                  value={selectedColor.g}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setSelectedColor((prev) => ({ ...prev, g: Number(e.target.value) }))
+                  }
+                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                />
+                <span className="text-xs w-8 text-center">{selectedColor.g}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs w-4">B</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="255"
+                  value={selectedColor.b}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setSelectedColor((prev) => ({ ...prev, b: Number(e.target.value) }))
+                  }
+                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                />
+                <span className="text-xs w-8 text-center">{selectedColor.b}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs">Preview</span>
+                <div
+                  className="h-6 w-6 rounded border border-gray-300"
+                  style={{ backgroundColor: `rgb(${selectedColor.r}, ${selectedColor.g}, ${selectedColor.b})` }}
+                ></div>
               </div>
             </div>
           </div>

@@ -88,15 +88,16 @@ Please remove the **TODO** comments.`,
 }
 `,
         codeSkeletone: `module sui_mmers::swimmer_struct {
-        use sui::object::{Self, UID};
-        
-        // has key: This ability indicates that the struct can become an 
-        // independent object with a unique ID on-chain.
-        public struct Swimmer has key {
-            id: UID,
-            // TODO: add any additional swimmer fields needed for later chapters.
-        }
+    use sui::object::{Self, UID};
+    use std::string::String;
+
+    // has key: This ability indicates that the struct can become an 
+    // independent object with a unique ID on-chain.
+    public struct Swimmer has key {
+        id: UID,
+      // TODO: add any additional swimmer fields needed for later chapters.
     }
+}
 `,
       },
       {
@@ -139,8 +140,7 @@ Set \`boost\` to 0.
 
 Please remove the **TODO** comments.`,
         readonly: false,
-        codeTemplate: `
-    public entry fun mint_swimmer(
+        codeTemplate: `public entry fun mint_swimmer(
         // Since an entry function cannot receive a String directly,
         // we take a byte vector (vector<u8>) as input and then convert it.
         name: vector<u8>,
@@ -263,8 +263,7 @@ Extend the struct with \`last_update_timestamp_ms\` and implement \`update_progr
         }
     }
 }`,
-        codeSkeletone: `
-        module sui_mmers::swimmer {
+        codeSkeletone: `module sui_mmers::swimmer {
     use sui::clock::{Self, Clock};
     use sui::object::{Self, UID};
     use sui::transfer;
@@ -279,6 +278,7 @@ Extend the struct with \`last_update_timestamp_ms\` and implement \`update_progr
         color: String,
         speed: u64,
         hunger: u64,
+        boost: u64,
         distance_traveled: u64,
         last_update_timestamp_ms: u64,
     }
@@ -587,8 +587,7 @@ Create an \`eat_tuna\` function. \`eat_tuna\` function adds the \`boost\` value 
         swimmer.hunger = swimmer.hunger + (size * 10);
         object::delete(id);
     }
-}
-`,
+}`,
         codeSkeletone: `module sui_mmers::tuna_buffet {
     use sui::object::{Self, UID};
     use sui::transfer;

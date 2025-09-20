@@ -292,9 +292,8 @@ function GameplayContent() {
                 <p className="mt-2 text-2xl font-bold text-emerald-700">{swimmers.length}</p>
               </div>
               <div className="rounded-xl border border-purple-100 bg-purple-50 px-5 py-4">
-                <p className="text-xs uppercase text-purple-600 font-semibold">Package status</p>
-                <p className="mt-2 text-sm text-gray-800">{packageId ? 'Ready to race' : 'Needs deployment'}</p>
-                {packageId && <p className="mt-1 text-xs font-mono text-gray-500 break-all">{packageId}</p>}
+                <p className="text-xs uppercase text-purple-600 font-semibold">Tuna Cans owned</p>
+                <p className="mt-2 text-2xl font-bold text-purple-700">{tunaCans.length}</p>
               </div>
             </section>
           )}
