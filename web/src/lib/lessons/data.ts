@@ -701,7 +701,7 @@ Create \`SwimmerRegistry\` shared object to register all swimmer information, an
         swimmers: Table<ID, address>,
     }
 
-    public entry fun init(ctx: &mut TxContext) {
+    fun init(ctx: &mut TxContext) {
         let registry = SwimmerRegistry { id: object::new(ctx), swimmers: table::new(ctx) };
         transfer::share_object(registry);
     }
