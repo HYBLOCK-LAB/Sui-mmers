@@ -21,7 +21,7 @@ export type DeploymentConfig = {
 };
 
 const BASE_DEPLOYMENT_CONFIG: DeploymentConfig = {
-  swimmerColor: '#ffffff',
+  swimmerColor: '#00cc63',
   startingLocation: 'harbor_launch',
   startingDistance: 0,
   baseSpeed: DEFAULT_VALUES.baseSpeedPerHour,
@@ -348,7 +348,7 @@ export function DeploymentPreview({ config, lessonSlug, chapterSlug }: Deploymen
       for (const frame of [1, 2, 3]) {
         const img = new Image()
         img.onload = () => {
-          const recoloredDataUrl = recolorImageByHue(img, hue, 0, 0)
+          const recoloredDataUrl = recolorImageByHue(img, hue, 148, 151)
           if (recoloredDataUrl) {
             newImages.set(`swimmer-frame-${frame}`, recoloredDataUrl)
             setRecoloredImages(new Map(newImages))
