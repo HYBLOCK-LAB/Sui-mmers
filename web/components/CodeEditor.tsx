@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import dynamic from 'next/dynamic'
-import { SWIMMER_MODULE_TEMPLATE, DEFAULT_VALUES, SwimmingStyle, STYLE_NAMES } from '@/src/contracts/moveTemplates'
+import { SWIMMER_MODULE_TEMPLATE, DEFAULT_VALUES } from '@/src/contracts/moveTemplates'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 
@@ -10,24 +10,23 @@ const Editor = dynamic(() => import('@monaco-editor/react'), {
 })
 
 interface CodeEditorProps {
-  onDeploy: (name: string, style: number) => void
+  onMint: (name: string, species: string) => void
   disabled?: boolean
 }
 
-export function CodeEditor({ onDeploy, disabled }: CodeEditorProps) {
-  const [name, setName] = useState('MySwimmer')
-  const [speed, setSpeed] = useState(DEFAULT_VALUES.speed)
-  const [stamina, setStamina] = useState(DEFAULT_VALUES.stamina)
-  const [style, setStyle] = useState(DEFAULT_VALUES.style)
+export function CodeEditor({ onMint, disabled }: CodeEditorProps) {
+  const [name, setName] = useState('My Swimmer')
+  const [species, setSpecies] = useState('Pacific Orca')
+  const [baseSpeed, setBaseSpeed] = useState(DEFAULT_VALUES.baseSpeedPerHour)
+  const [tunaBonus, setTunaBonus] = useState(DEFAULT_VALUES.tunaBonus)
   const [isDeploying, setIsDeploying] = useState(false)
 
   // 템플릿에 값 적용
   const getProcessedCode = useCallback(() => {
     return SWIMMER_MODULE_TEMPLATE
-      .replace('{{SPEED}}', speed.toString())
-      .replace('{{STAMINA}}', stamina.toString())
-      .replace('{{STYLE}}', style.toString())
-  }, [speed, stamina, style])
+      .replace(/{{BASE_SPEED_PER_HOUR}}/g, baseSpeed.toString())
+      .replace(/{{TUNA_BONUS}}/g, tunaBonus.toString())
+  }, [baseSpeed, tunaBonus])
 
   const handleDeploy = async () => {
     if (!name.trim()) {
@@ -35,9 +34,14 @@ export function CodeEditor({ onDeploy, disabled }: CodeEditorProps) {
       return
     }
 
+    if (!species.trim()) {
+      alert('수영 선수가 어떤 종인지 정해주세요!')
+      return
+    }
+
     setIsDeploying(true)
     try {
-      await onDeploy(name, style)
+      await onMint(name.trim(), species.trim())
     } catch (error) {
       console.error('Deploy failed:', error)
       alert('배포 실패: ' + (error as Error).message)
@@ -49,7 +53,7 @@ export function CodeEditor({ onDeploy, disabled }: CodeEditorProps) {
   return (
     <Card className="flex flex-col h-full">
       <CardHeader>
-        <CardTitle>2단계. 선수 파라미터 설정</CardTitle>
+        <CardTitle>2단계. 첫 Swimmer 민팅</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
@@ -65,51 +69,53 @@ export function CodeEditor({ onDeploy, disabled }: CodeEditorProps) {
               placeholder="수영 선수 이름 입력"
             />
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              종(species)
+            </label>
+            <input
+              type="text"
+              value={species}
+              onChange={(e) => setSpecies(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="예: Pacific Orca"
+            />
+          </div>
           
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                속도 (10-100)
+                기본 속도 (m / h)
               </label>
               <input
                 type="number"
                 min="10"
-                max="100"
-                value={speed}
-                onChange={(e) => setSpeed(Number(e.target.value))}
+                max="1000"
+                value={baseSpeed}
+                onChange={(e) => setBaseSpeed(Number(e.target.value))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+              <p className="text-xs text-gray-500 mt-1">
+                코드 예시에서 자동 전진 속도를 조정합니다.
+              </p>
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                체력 (50-100)
+                참치 보너스 (m)
               </label>
               <input
                 type="number"
-                min="50"
-                max="100"
-                value={stamina}
-                onChange={(e) => setStamina(Number(e.target.value))}
+                min="1"
+                max="500"
+                value={tunaBonus}
+                onChange={(e) => setTunaBonus(Number(e.target.value))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                스타일
-              </label>
-              <select
-                value={style}
-                onChange={(e) => setStyle(Number(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {Object.entries(STYLE_NAMES).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                참치를 먹였을 때 추가 이동할 거리를 설정합니다.
+              </p>
             </div>
           </div>
         </div>
@@ -139,7 +145,7 @@ export function CodeEditor({ onDeploy, disabled }: CodeEditorProps) {
           size="lg"
           className="w-full"
         >
-          {isDeploying ? '처리 중...' : '🚀 NFT 민팅하기'}
+          {isDeploying ? '처리 중...' : '🚀 Swimmer 민팅하기'}
         </Button>
       </CardFooter>
     </Card>

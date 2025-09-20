@@ -1,6 +1,7 @@
 import { Transaction } from '@mysten/sui/transactions'
 import { SuiClient } from '@mysten/sui/client'
-import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
+
+export const CLOCK_OBJECT_ID = '0x0000000000000000000000000000000000000000000000000000000000000006'
 
 export class SuiService {
   private client: SuiClient
@@ -12,36 +13,70 @@ export class SuiService {
     this.client = new SuiClient({ url: rpcUrl })
   }
 
-  // 수영 선수 NFT 생성 트랜잭션 빌드
-  async buildCreateSwimmerTx(
+  // 수영 선수 NFT 민팅 트랜잭션 빌드
+  async buildMintSwimmerTx(
     packageId: string,
     name: string,
-    style: number
+    species: string
   ): Promise<Transaction> {
     const tx = new Transaction()
     
     tx.moveCall({
-      target: `${packageId}::swimmer::create_swimmer`,
+      target: `${packageId}::swimmer::mint_swimmer`,
       arguments: [
         tx.pure.string(name),
-        tx.pure.u8(style),
+        tx.pure.string(species),
+        tx.object(CLOCK_OBJECT_ID),
       ],
     })
 
     return tx
   }
 
-  // 훈련 트랜잭션 빌드
-  async buildTrainSwimmerTx(
+  // 자동 전진 업데이트 트랜잭션 빌드
+  async buildUpdateProgressTx(
     packageId: string,
     swimmerId: string
   ): Promise<Transaction> {
     const tx = new Transaction()
     
     tx.moveCall({
-      target: `${packageId}::swimmer::train`,
+      target: `${packageId}::swimmer::update_progress`,
       arguments: [
         tx.object(swimmerId),
+        tx.object(CLOCK_OBJECT_ID),
+      ],
+    })
+
+    return tx
+  }
+
+  // 참치 통조림 민팅 트랜잭션 빌드
+  async buildMintTunaTx(packageId: string): Promise<Transaction> {
+    const tx = new Transaction()
+
+    tx.moveCall({
+      target: `${packageId}::swimmer::mint_tuna`,
+      arguments: [],
+    })
+
+    return tx
+  }
+
+  // 참치 먹이기 트랜잭션 빌드
+  async buildEatTunaTx(
+    packageId: string,
+    swimmerId: string,
+    tunaId: string
+  ): Promise<Transaction> {
+    const tx = new Transaction()
+
+    tx.moveCall({
+      target: `${packageId}::swimmer::eat_tuna`,
+      arguments: [
+        tx.object(swimmerId),
+        tx.object(tunaId),
+        tx.object(CLOCK_OBJECT_ID),
       ],
     })
 
@@ -65,6 +100,26 @@ export class SuiService {
       )
     } catch (error) {
       console.error('Error fetching swimmers:', error)
+      return []
+    }
+  }
+
+  async getUserTunaCans(address: string): Promise<any[]> {
+    try {
+      const objects = await this.client.getOwnedObjects({
+        owner: address,
+        options: {
+          showType: true,
+          showContent: true,
+          showDisplay: true,
+        }
+      })
+
+      return objects.data.filter(obj => 
+        obj.data?.type?.includes('swimmer::TunaCan')
+      )
+    } catch (error) {
+      console.error('Error fetching tuna cans:', error)
       return []
     }
   }
