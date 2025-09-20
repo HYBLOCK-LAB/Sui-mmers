@@ -1,104 +1,82 @@
-import { setup, openProject, Project } from '@imcoding.online/js-move-playground'
 import { Transaction } from '@mysten/sui/transactions'
-import { toBase64 } from '@mysten/sui/utils'
 
 /**
  * 브라우저 기반 Move 컴파일러
- * js-move-playground 라이브러리를 사용하여 브라우저에서 직접 Move 코드를 컴파일
+ * 서버 API를 통해 실제 Move 코드를 컴파일
  */
 export class BrowserMoveCompiler {
   private static initialized = false
-  private static currentProject: Project | null = null
   
   /**
-   * 컴파일러 초기화
+   * 컴파일러 초기화 (서버 API 사용이므로 실제 초기화 불필요)
    */
   static async initialize(): Promise<void> {
     if (this.initialized) return
     
-    console.log('Initializing browser Move compiler...')
-    try {
-      await setup()
-      this.initialized = true
-      console.log('Browser Move compiler initialized successfully')
-    } catch (error) {
-      console.error('Failed to initialize Move compiler:', error)
-      throw error
-    }
+    console.log('Initializing Move compiler (server-based)...')
+    this.initialized = true
+    console.log('Move compiler ready')
   }
   
   /**
-   * Move 소스 코드를 컴파일하여 바이트코드 생성
+   * Move 소스 코드를 컴파일하여 바이트코드 생성 (서버 API 사용)
    */
   static async compileMove(
     moduleName: string,
     sourceCode: string
   ): Promise<{ bytecode: string, dependencies: string[] }> {
-    // 컴파일러 초기화 확인
-    if (!this.initialized) {
-      await this.initialize()
-    }
-    
     try {
-      // 프로젝트 생성 또는 열기
-      const projectName = `swimmer_${Date.now()}`
-      this.currentProject = await openProject(projectName)
+      console.log('Compiling Move code via server API...')
       
-      // Move.toml 파일 생성
-      const moveToml = `[package]
-name = "swimming"
-version = "0.0.1"
-
-[dependencies]
-Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "testnet" }
-
-[addresses]
-swimming = "0x0"`
+      const response = await fetch('/api/compile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          moveCode: sourceCode,
+          moduleName: moduleName,
+        }),
+      })
       
-      await this.currentProject.createFile('Move.toml', moveToml)
+      const result = await response.json()
       
-      // 소스 디렉토리 생성 및 Move 파일 추가
-      await this.currentProject.createFile(`sources/${moduleName}.move`, sourceCode)
-      
-      // 컴파일 실행
-      console.log('Compiling Move module in browser...')
-      const buildResult = await this.currentProject.build()
-      
-      if (!buildResult.success) {
-        throw new Error(`Compilation failed: ${buildResult.error || 'Unknown error'}`)
+      if (!response.ok) {
+        throw new Error(result.error || `Server error: ${response.status}`)
       }
       
-      console.log('Compilation successful:', buildResult)
+      if (!result.success) {
+        const errorMsg = result.logs || result.error || 'Compilation failed'
+        console.error('Compilation error details:', errorMsg)
+        throw new Error(errorMsg)
+      }
       
-      // 컴파일된 바이트코드 추출
-      // js-move-playground는 컴파일된 바이트코드를 프로젝트 내에 저장합니다
-      const bytecodeFile = `build/swimming/bytecode_modules/${moduleName}.mv`
-      const bytecodeContent = await this.currentProject.readFile(bytecodeFile)
-      
-      // Base64 인코딩
-      const bytecodeBase64 = toBase64(new Uint8Array(bytecodeContent))
+      console.log('✅ Move code compiled successfully')
+      if (result.logs) {
+        console.log('Compilation output:', result.logs)
+      }
       
       return {
-        bytecode: bytecodeBase64,
-        dependencies: [
-          '0x0000000000000000000000000000000000000000000000000000000000000001', // Sui Framework
-          '0x0000000000000000000000000000000000000000000000000000000000000002'  // Move Stdlib
+        bytecode: result.bytecode,
+        dependencies: result.dependencies || [
+          '0x0000000000000000000000000000000000000000000000000000000000000001',
+          '0x0000000000000000000000000000000000000000000000000000000000000002'
         ]
       }
     } catch (error) {
       console.error('Move compilation failed:', error)
-      throw error
+      throw new Error(`Failed to compile Move code: ${(error as Error).message}`)
     }
   }
   
   /**
-   * 배포 트랜잭션 생성 (브라우저에서 컴파일된 바이트코드 사용)
+   * 배포 트랜잭션 생성 (실제 컴파일된 바이트코드 사용)
    */
   static async createDeployTransaction(
     moduleName: string,
     sourceCode: string
   ): Promise<Transaction> {
-    // Move 코드를 브라우저에서 컴파일
+    // Move 코드를 서버에서 컴파일
     const { bytecode, dependencies } = await this.compileMove(moduleName, sourceCode)
     
     // Transaction 생성
@@ -106,6 +84,11 @@ swimming = "0x0"`
     
     // 바이트코드를 Uint8Array로 변환
     const bytecodeBytes = Uint8Array.from(atob(bytecode), c => c.charCodeAt(0))
+    
+    console.log('Creating deploy transaction:', {
+      bytecodeSize: bytecodeBytes.length,
+      dependencies: dependencies
+    })
     
     // 패키지 배포
     const result = tx.publish({
@@ -190,8 +173,8 @@ swimming = "0x0"`
         event::emit(SwimmerMinted {
             swimmer_id: object::uid_to_address(&swimmer.id),
             owner,
-            name: string::clone(&swimmer.name),
-            species: string::clone(&swimmer.species),
+            name: swimmer.name,
+            species: swimmer.species,
         });
 
         transfer::public_transfer(swimmer, owner);
@@ -252,16 +235,9 @@ swimming = "0x0"`
   }
   
   /**
-   * 프로젝트 정리
+   * 정리 작업 (서버 API 사용이므로 특별한 정리 불필요)
    */
   static async cleanup(): Promise<void> {
-    if (this.currentProject) {
-      try {
-        await this.currentProject.close()
-        this.currentProject = null
-      } catch (error) {
-        console.error('Failed to close project:', error)
-      }
-    }
+    // No cleanup needed for server-based compilation
   }
 }

@@ -30,7 +30,7 @@ version = "0.0.1"
 edition = "2024.beta"
 
 [dependencies]
-Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "testnet" }
+Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "framework/mainnet" }
 
 [addresses]
 swimming = "0x0"`
@@ -38,7 +38,15 @@ swimming = "0x0"`
     await fs.writeFile(path.join(tempDir, 'Move.toml'), moveToml)
     await fs.writeFile(path.join(tempDir, 'sources', `${moduleName}.move`), moveCode)
 
-    const { stdout } = await execAsync('sui move build --skip-fetch-latest-git-deps', { cwd: tempDir })
+    console.log('Compiling Move code in directory:', tempDir)
+    console.log('Module name:', moduleName)
+    
+    const { stdout, stderr } = await execAsync('sui move build --skip-fetch-latest-git-deps', { cwd: tempDir })
+    
+    console.log('Compilation stdout:', stdout)
+    if (stderr) {
+      console.log('Compilation stderr:', stderr)
+    }
 
     const bytecodeFile = path.join(tempDir, 'build', 'swimming', 'bytecode_modules', `${moduleName}.mv`)
     const bytecode = await fs.readFile(bytecodeFile)
@@ -65,12 +73,27 @@ swimming = "0x0"`
     }
 
     console.error('Compilation error:', error)
+    
+    // Extract more detailed error information
+    let errorMessage = 'Compilation failed'
+    let errorLogs = ''
+    
+    if (error?.message) {
+      errorMessage = error.message
+    }
+    if (error?.stderr) {
+      errorLogs = error.stderr
+      errorMessage = `${errorMessage}\n${error.stderr}`
+    }
+    if (error?.stdout && !errorLogs) {
+      errorLogs = error.stdout
+    }
 
     return NextResponse.json(
       {
         success: false,
-        error: error?.message || 'Compilation failed',
-        logs: error?.stderr || error?.stdout || '',
+        error: errorMessage,
+        logs: errorLogs,
       },
       { status: 500 }
     )

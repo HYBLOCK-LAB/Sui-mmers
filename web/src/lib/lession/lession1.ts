@@ -83,8 +83,8 @@ export const LESSON_CODE_1 = `module swimming::swimmer {
         event::emit(SwimmerMinted {
             swimmer_id: object::uid_to_address(&swimmer.id),
             owner,
-            name: string::clone(&swimmer.name),
-            species: string::clone(&swimmer.species),
+            name: swimmer.name,
+            species: swimmer.species,
         });
 
         transfer::public_transfer(swimmer, owner);

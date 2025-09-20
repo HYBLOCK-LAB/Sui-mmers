@@ -63,6 +63,18 @@ npm run dev
 4. **Open in browser**
 Navigate to [http://localhost:3000](http://localhost:3000)
 
+## ⚠️ Important Notes
+
+### 현재 이슈
+- **Move 컴파일러**: 브라우저 컴파일러가 실제로 작동하지 않음 (템플릿 방식 사용 중)
+- **코드 불일치**: `swimmer.move`와 `moveTemplates.ts`가 다른 구조 사용
+- **수동 배포**: Sui CLI를 통한 수동 배포 후 패키지 ID 입력 필요
+
+### 해결 방법
+1. Sui CLI로 직접 배포: `sui client publish --gas-budget 100000000`
+2. 배포된 패키지 ID를 복사하여 앱에 입력
+3. 자세한 내용은 `DEPLOYMENT_ISSUE.md` 참조
+
 ## 🎯 How to Play
 
 ### Step 1: Connect Your Wallet
@@ -72,18 +84,20 @@ Click the glowing "Connect Wallet" button in the header and select your Sui wall
 1. 브라우저 Move 컴파일러가 준비되면
 2. "패키지 배포하기" 버튼을 눌러 테스트넷에 Swimmer 패키지를 1회 배포합니다
 3. 지갑에서 트랜잭션을 승인합니다
+   > 💡 현재 브라우저 컴파일이 작동하지 않으면 CLI 배포를 사용하세요
 
 ### Step 3: 선수 NFT 민팅
 1. Customize your swimmer's attributes:
-   - **Name**: Give your swimmer a unique name
-   - **Speed**: Set swimming speed (10-100)
-   - **Stamina**: Set endurance level (50-100)
-   - **Style**: Choose swimming style (자유형, 배영, 평영, 접영)
+   - **Name**: 선수 이름 입력
+   - **Species**: 선수 종류 입력 (예: 돌고래, 상어, 인간 등)
 2. "🚀 NFT 민팅하기" 버튼으로 선수를 생성합니다
-3. Approve the transaction in your wallet
+3. 지갑에서 트랜잭션을 승인합니다
 
-### Step 4: Watch Them Swim!
-Your swimmers will appear in the animated pool with unique animations based on their style.
+### Step 4: Gameplay Console에서 게임하기
+1. "🎮 Gameplay Console로 이동" 버튼 클릭
+2. 자동 전진: "⏱ 자동 전진" 버튼으로 시간 경과에 따른 거리 증가
+3. 아이템 사용: "🍣 참치 민팅" 후 "🍽 Swimmer에게 먹이기"로 보너스 거리 획득
+4. 실시간으로 수영장에서 선수들의 위치 확인
 
 ## 📁 Project Structure
 
@@ -124,24 +138,32 @@ web/
 
 ## 📚 Move Contract Overview
 
-The Swimmer NFT contract includes:
+### 실제 구현된 구조 (moveTemplates.ts)
 
 ```move
 public struct Swimmer has key, store {
     id: UID,
+    owner: address,
     name: String,
-    speed: u64,      // Swimming speed (10-100)
-    style: u8,       // 0: 자유형, 1: 배영, 2: 평영, 3: 접영
-    stamina: u64,    // Endurance level (50-100)
-    medals: u64,     // Achievement medals
+    species: String,                     // 선수 종류
+    distance_traveled: u64,              // 총 이동 거리
+    base_speed_per_hour: u64,           // 시간당 기본 속도
+    last_update_timestamp_ms: u64,      // 마지막 업데이트 시간
+}
+
+public struct TunaCan has key, store {
+    id: UID,
+    energy: u64,                        // 보너스 거리
 }
 ```
 
 ### Core Functions
-- `create_swimmer`: Mint a new swimmer NFT with custom attributes
-- `train`: Improve swimmer's speed and stamina
-- `award_medal`: Award medals for achievements
-- `change_style`: Modify swimming technique
+- `mint_swimmer`: 새 수영 선수 NFT 민팅
+- `update_progress`: 시간 경과에 따른 자동 전진
+- `mint_tuna`: 참치 아이템 생성
+- `eat_tuna`: 참치 소비로 보너스 거리 획득
+
+> ⚠️ **Note**: `move/sources/swimmer.move`와 구조가 다름 (통일 필요)
 
 ## 🛠️ Technology Stack
 
@@ -204,25 +226,35 @@ Custom animations and web3 color system are configured in `tailwind.config.js`
 
 ## 📈 Roadmap
 
-### Phase 1: Foundation ✅
+### Phase 1: Foundation ✅ (완료)
 - [x] Next.js migration
-- [x] Modern web3 design system
-- [x] Browser-based Move compiler
+- [x] Modern web3 design system  
+- [x] Browser-based Move compiler (템플릿 방식)
 - [x] Basic NFT creation
+- [x] Session 1, 2 레슨 시스템
+- [x] Gameplay Console 페이지
+- [x] 아이템 시스템 (TunaCan)
+- [x] 자동 전진 시스템
 
-### Phase 2: Enhanced Features 🚧
-- [ ] Server-side Move compilation API
+### Phase 2: 긴급 수정 🔴 (진행 중)
+- [ ] Move 코드 통일 (swimmer.move vs moveTemplates.ts)
+- [ ] 브라우저 Move 컴파일러 실제 구현
+- [ ] 배포 프로세스 자동화
+- [ ] 문서 일관성 확보
+
+### Phase 3: 주요 기능 🚧
+- [ ] 리더보드 시스템 (공유 레지스트리)
 - [ ] Swimming competitions (PvP)
-- [ ] Training system implementation
+- [ ] Session 3+ 추가 레슨
 - [ ] Achievement system
 
-### Phase 3: Advanced 📋
+### Phase 4: Advanced 📋
 - [ ] Multiplayer swimming races
-- [ ] Leaderboards and rankings
-- [ ] Additional lessons (2-10)
 - [ ] Mobile responsive optimization
+- [ ] WebAssembly Move 컴파일러
+- [ ] 실시간 업데이트 (WebSocket)
 
-### Phase 4: Community 🌐
+### Phase 5: Community 🌐
 - [ ] User profiles
 - [ ] Social features
 - [ ] NFT marketplace
