@@ -15,6 +15,7 @@ import {
 } from '@/components/lessons/DeploymentConfigurator';
 import type { DeploymentConfig } from '@/components/lessons/DeploymentConfigurator';
 import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
+import { CLOCK_OBJECT_ID } from '@/lib/services/suiService';
 
 interface LessonPageClientProps {
   lessonSlug: string;
@@ -163,7 +164,6 @@ export function LessonPageClient({
                 alert('🎉 트랜잭션이 성공했습니다!');
               }
             }
-            fetchSwimmers();
           },
           onError: (error) => {
             console.error('Transaction failed:', error);
@@ -201,7 +201,6 @@ export function LessonPageClient({
         {
           onSuccess: () => {
             alert('🎉 새로운 Swimmer NFT가 도착했어요!');
-            fetchSwimmers();
           },
           onError: (error) => {
             console.error('Transaction failed:', error);

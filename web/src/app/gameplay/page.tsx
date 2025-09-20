@@ -725,7 +725,7 @@ function GameplayContent() {
               onCompileAndDeploy={handleCompileAndDeploy}
               onMint={handleMintFromTemplate}
               disabled={!currentAccount || isLoading}
-              codeTemplate={ApiMoveCompiler.getSwimmerMoveTemplate()}
+              codeTemplate={ApiMoveCompiler.getAdvancedSwimmerTemplate()}
               senderAddress={currentAccount?.address}
             />
           </section>

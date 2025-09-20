@@ -30,11 +30,13 @@ interface CodeEditorProps {
   senderAddress?: string;
 }
 
-const FALLBACK_TEMPLATE = `module sui_mmers::example {
+const FALLBACK_TEMPLATE = `module swimming::example {
     use sui::object::{Self, UID};
+    use std::string::{Self, String};
 
-    public struct Swimmer has key {
+    public struct Swimmer has key, store {
         id: UID,
+        name: String,
         distance_traveled: u64,
     }
 }`;

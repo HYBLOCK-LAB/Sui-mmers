@@ -1,6 +1,6 @@
 import { Transaction } from '@mysten/sui/transactions'
-import { fromBase64, toBase64 } from '@mysten/sui/utils'
-import { SWIMMER_BYTECODE } from '@/src/contracts/compiled/swimmerBytecode'
+import { fromBase64 } from '@mysten/sui/utils'
+import { COMPILED_MODULES, type ModuleName } from '@/src/contracts/compiled/moveModules'
 import { debugTransaction, debugModuleData } from '@/lib/utils/debug'
 
 // Move 모듈 메타데이터
@@ -14,18 +14,18 @@ export interface MoveModule {
 const SUI_STDLIB_ADDRESS = '0x0000000000000000000000000000000000000000000000000000000000000001'
 const SUI_FRAMEWORK_ADDRESS = '0x0000000000000000000000000000000000000000000000000000000000000002'
 
-// 실제 컴파일된 Move 바이트코드
-const PRECOMPILED_SWIMMER_MODULE = {
+// 실제 컴파일된 Move 바이트코드 (자동 생성된 파일에서 로드)
+const PRECOMPILED_SWIMMER_MODULE: MoveModule = {
   name: 'swimmer',
-  bytecode: SWIMMER_BYTECODE,
-  dependencies: [SUI_STDLIB_ADDRESS, SUI_FRAMEWORK_ADDRESS]
+  bytecode: COMPILED_MODULES.swimmer.bytecode,
+  dependencies: [SUI_STDLIB_ADDRESS, SUI_FRAMEWORK_ADDRESS],
 }
 
 export class MoveCompiler {
   /**
    * Move 모듈을 배포하는 트랜잭션 생성
    */
-  static createPublishTransaction(modules: MoveModule[]): Transaction {
+  static createPublishTransaction(modules: MoveModule[], recipientAddress?: string): Transaction {
     const tx = new Transaction()
     
     try {
@@ -62,7 +62,12 @@ export class MoveCompiler {
       // 배포 결과가 배열인 경우 첫 번째 요소를 사용, 아니면 result 자체를 사용
       const upgradeCap = Array.isArray(result) ? result[0] : result
       if (upgradeCap) {
-        tx.transferObjects([upgradeCap], tx.gas)
+        if (recipientAddress) {
+          tx.transferObjects([upgradeCap], tx.pure.address(recipientAddress))
+        } else {
+          // fallback: use gas owner (not recommended, but keeps backwards compatibility)
+          tx.transferObjects([upgradeCap], tx.gas)
+        }
       }
     } catch (error) {
       console.error('Failed to create publish transaction:', error)
@@ -70,6 +75,32 @@ export class MoveCompiler {
     }
     
     return tx
+  }
+
+  /**
+   * 자동 생성된 컴파일 결과에서 모듈 집합 가져오기
+   * names가 없으면 모든 모듈 반환
+   */
+  static getCompiledModules(names?: ModuleName[]): MoveModule[] {
+    const deps = [SUI_STDLIB_ADDRESS, SUI_FRAMEWORK_ADDRESS]
+    const entries = Object.entries(COMPILED_MODULES) as [ModuleName, { name: string; bytecode: string }][]
+    const filtered = names && names.length > 0
+      ? entries.filter(([name]) => names.includes(name))
+      : entries
+
+    return filtered.map(([name, mod]) => ({
+      name: mod.name || name,
+      bytecode: mod.bytecode,
+      dependencies: deps,
+    }))
+  }
+
+  /**
+   * 자동 생성된 바이트코드로 배포 트랜잭션 생성 (헬퍼)
+   */
+  static createPublishTransactionFromCompiled(names?: ModuleName[], recipientAddress?: string): Transaction {
+    const modules = this.getCompiledModules(names)
+    return this.createPublishTransaction(modules, recipientAddress)
   }
   
   /**

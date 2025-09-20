@@ -1,5 +1,5 @@
 // Auto-generated Move bytecode
-// Generated at: 2025-09-20T16:20:52.030Z
+// Generated at: 2025-09-20T22:26:58.037Z
 // DO NOT EDIT MANUALLY
 
 export const COMPILED_MODULES = {

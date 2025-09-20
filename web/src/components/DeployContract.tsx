@@ -159,6 +159,88 @@ export function DeployContract({ onPackageDeployed }: DeployContractProps) {
     }
   }
 
+  // 새로 추가: 사전 컴파일된 바이트코드로 배포
+  const handleDeployPrecompiled = async () => {
+    if (!currentAccount) {
+      setErrorMessage('먼저 지갑을 연결해주세요!')
+      return
+    }
+
+    setIsDeploying(true)
+    setDeployStatus('deploying')
+    setErrorMessage('')
+
+    try {
+      console.log('🚀 Deploying precompiled modules from moveModules.ts ...')
+
+      // 사전 컴파일된 swimmer 모듈로 트랜잭션 생성 (+ 업그레이드캡을 발신자에게 전송)
+      const tx: Transaction = MoveCompiler.createPublishTransactionFromCompiled(['swimmer'], currentAccount.address)
+
+      // 트랜잭션 실행
+      signAndExecute(
+        {
+          transaction: tx,
+          options: {
+            showObjectChanges: true,
+            showEffects: true,
+            showEvents: true,
+          },
+        },
+        {
+          onSuccess: async (result) => {
+            console.log('Precompiled deploy success:', result)
+            let newPackageId = MoveCompiler.extractPackageId(result)
+
+            if (!newPackageId && result.digest) {
+              try {
+                const response = await fetch('https://sui-testnet-rpc.publicnode.com', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: 1,
+                    method: 'sui_getTransactionBlock',
+                    params: [result.digest, { showObjectChanges: true }]
+                  })
+                })
+                const rpcResult = await response.json()
+                if (rpcResult.result?.objectChanges) {
+                  const published = rpcResult.result.objectChanges.find((c: any) => c.type === 'published')
+                  if (published?.packageId) {
+                    newPackageId = published.packageId
+                  }
+                }
+              } catch (e) {
+                console.error('RPC fallback failed:', e)
+              }
+            }
+
+            if (newPackageId) {
+              setPackageId(newPackageId)
+              setDeployStatus('success')
+              localStorage.setItem('smr-package-id', newPackageId)
+              onPackageDeployed(newPackageId)
+            } else {
+              setDeployStatus('error')
+              setErrorMessage('패키지 ID를 추출할 수 없습니다')
+            }
+          },
+          onError: (error) => {
+            console.error('Precompiled deploy failed:', error)
+            setDeployStatus('error')
+            setErrorMessage(error.message || '배포 실패')
+          },
+        }
+      )
+    } catch (error) {
+      console.error('Deploy (precompiled) failed:', error)
+      setDeployStatus('error')
+      setErrorMessage((error as Error).message)
+    } finally {
+      setIsDeploying(false)
+    }
+  }
+
   const handleReset = () => {
     localStorage.removeItem('smr-package-id')
     setPackageId(null)
@@ -224,7 +306,9 @@ export function DeployContract({ onPackageDeployed }: DeployContractProps) {
           ) : (
             <>
               <p className="text-sm text-gray-600 mb-4">
-                브라우저에서 Move 코드를 컴파일하여 테스트넷에 패키지를 배포합니다. 이후 NFT 민팅은 2단계에서 진행합니다.
+                두 가지 방법 중 선택:
+                <br/>- 소스 코드를 브라우저에서 컴파일하여 배포
+                <br/>- 미리 컴파일된 바이트코드로 바로 배포 (권장)
               </p>
               
               {errorMessage && (
@@ -233,13 +317,24 @@ export function DeployContract({ onPackageDeployed }: DeployContractProps) {
                 </div>
               )}
               
-              <Button
-                onClick={handleDeploy}
-                disabled={isDeploying || !currentAccount || !compilerReady}
-                className="w-full"
-              >
-                {isDeploying ? '배포 중...' : '패키지 배포하기'}
-              </Button>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <Button
+                  onClick={handleDeployPrecompiled}
+                  disabled={isDeploying || !currentAccount}
+                  className="w-full"
+                >
+                  {isDeploying ? '배포 중...' : '미리 컴파일된 바이트코드로 배포'}
+                </Button>
+
+                <Button
+                  onClick={handleDeploy}
+                  disabled={isDeploying || !currentAccount || !compilerReady}
+                  variant="outline"
+                  className="w-full"
+                >
+                  {isDeploying ? '배포 중...' : '브라우저에서 컴파일 후 배포'}
+                </Button>
+              </div>
               
               {!currentAccount && (
                 <p className="text-xs text-red-500 mt-2">지갑을 먼저 연결해주세요!</p>

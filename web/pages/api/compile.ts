@@ -16,7 +16,7 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const { moveCode, moduleName = 'swimmer' } = req.body
+  const { moveCode, moduleName: requestedModuleName = 'swimmer' } = req.body
 
   if (!moveCode) {
     return res.status(400).json({ error: 'Move code is required' })
@@ -26,11 +26,17 @@ export default async function handler(
   const tempDir = path.join(os.tmpdir(), `move-compile-${randomBytes(8).toString('hex')}`)
   
   try {
+    // 간단 파서: 모듈 주소 별칭과 모듈 이름 추출
+    const modMatch = /module\s+([A-Za-z_][A-Za-z0-9_]*)::([A-Za-z_][A-Za-z0-9_]*)\s*\{/.exec(moveCode)
+    const addrAlias = modMatch?.[1] || 'swimming'
+    const actualModuleName = modMatch?.[2] || requestedModuleName
+
     // 프로젝트 구조 생성
     await fs.mkdir(tempDir, { recursive: true })
     await fs.mkdir(path.join(tempDir, 'sources'), { recursive: true })
     
     // Move.toml 생성
+    // Move.toml 생성 (동적으로 주소 별칭 포함)
     const moveToml = `[package]
 name = "swimming"
 version = "0.0.1"
@@ -40,13 +46,14 @@ edition = "2024.beta"
 Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "testnet" }
 
 [addresses]
-swimming = "0x0"`
+swimming = "0x0"
+${addrAlias !== 'swimming' ? `${addrAlias} = "0x0"` : ''}`
     
     await fs.writeFile(path.join(tempDir, 'Move.toml'), moveToml)
     
     // Move 소스 코드 저장
     await fs.writeFile(
-      path.join(tempDir, 'sources', `${moduleName}.move`),
+      path.join(tempDir, 'sources', `${actualModuleName}.move`),
       moveCode
     )
     
@@ -62,7 +69,7 @@ swimming = "0x0"`
       'build',
       'swimming',
       'bytecode_modules',
-      `${moduleName}.mv`
+      `${actualModuleName}.mv`
     )
     
     const bytecode = await fs.readFile(bytecodeFile)

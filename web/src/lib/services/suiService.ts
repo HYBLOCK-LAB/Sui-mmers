@@ -26,6 +26,7 @@ export class SuiService {
       arguments: [
         tx.pure.string(name),
         tx.pure.string(species),
+        tx.object(CLOCK_OBJECT_ID),
       ],
     })
 
