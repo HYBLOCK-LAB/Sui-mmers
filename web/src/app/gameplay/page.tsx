@@ -8,9 +8,11 @@ import { LearningLayout } from '@/components/layout/LearningLayout';
 import { WalletConnect } from '@/components/WalletConnect';
 import { SwimmingPool } from '@/components/SwimmingPool';
 import { DeployContract } from '@/components/DeployContract';
+import { CodeEditor } from '@/components/CodeEditor';
 import { Button } from '@/components/ui/button';
 import { SuiService, CLOCK_OBJECT_ID } from '@/lib/services/suiService';
 import { SwimmerSummary, TunaCanItem } from '@/lib/types/swimmer';
+import { ApiMoveCompiler } from '@/lib/services/apiMoveCompiler';
 
 export default function Gameplay() {
   return (
@@ -30,9 +32,12 @@ function GameplayContent() {
     chains: ['sui:testnet'],
   };
 
-  // 실제 지갑 또는 Mock 지갑 선택
-  const currentAccount = isMockMode ? mockCurrentAccount : useCurrentAccount();
+  // 항상 모든 Hook을 호출 (React Hook 규칙)
+  const realAccount = useCurrentAccount();
   const { mutate: signAndExecute } = useSignAndExecuteTransaction();
+  
+  // 실제 지갑 또는 Mock 지갑 선택
+  const currentAccount = isMockMode ? mockCurrentAccount : realAccount;
   const [suiService] = useState(() => new SuiService('testnet'));
 
   const [swimmers, setSwimmers] = useState<SwimmerSummary[]>([]);
@@ -207,6 +212,122 @@ function GameplayContent() {
       fetchTunaCans();
     }
   }, [isMockMode, fetchSwimmers, fetchTunaCans]);
+
+  // Load package ID from localStorage on mount
+  useEffect(() => {
+    if (!isMockMode && typeof window !== 'undefined') {
+      const savedPackageId = window.localStorage.getItem('smr-package-id');
+      if (savedPackageId) {
+        console.log('Loaded package ID from localStorage:', savedPackageId);
+        setPackageId(savedPackageId);
+      }
+    }
+  }, [isMockMode]);
+
+  const handleCompileAndDeploy = async (transaction: any) => {
+    if (isMockMode) {
+      console.log('🎭 Mock 모드: 컴파일 및 배포는 지원되지 않습니다');
+      alert('Mock 모드에서는 컴파일 기능을 사용할 수 없습니다.');
+      return;
+    }
+
+    if (!currentAccount) {
+      alert('먼저 지갑을 연결해주세요!');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      signAndExecute(
+        { 
+          transaction,
+          options: {
+            showObjectChanges: true,  // Enable object changes to get package details
+            showEffects: true,
+          }
+        },
+        {
+          onSuccess: (result) => {
+            console.log('Transaction successful with full result:', result);
+            console.log('ObjectChanges:', result.objectChanges);
+            console.log('Effects:', result.effects);
+            
+            // Extract package ID from objectChanges for published packages
+            let deployedPackageId = null;
+            if (result.objectChanges) {
+              console.log('Checking objectChanges array of length:', result.objectChanges.length);
+              for (const change of result.objectChanges) {
+                console.log('Change type:', change.type, 'Change:', change);
+                if (change.type === 'published') {
+                  deployedPackageId = change.packageId;
+                  console.log('Found deployed package ID from objectChanges:', deployedPackageId);
+                  break;
+                }
+              }
+            }
+            
+            // If objectChanges didn't work, try to extract from effects
+            if (!deployedPackageId && result.effects) {
+              // Check for created objects (package will be in created)
+              if (result.effects.created) {
+                for (const obj of result.effects.created) {
+                  console.log('Created object:', obj);
+                  // Package objects have a specific pattern
+                  if (obj.owner && typeof obj.owner === 'object' && 'Immutable' in obj.owner) {
+                    deployedPackageId = obj.reference.objectId;
+                    console.log('Found package ID from effects.created:', deployedPackageId);
+                    break;
+                  }
+                }
+              }
+            }
+            
+            if (deployedPackageId) {
+              handlePackageDeployed(deployedPackageId);
+              alert(`🚀 패키지가 성공적으로 배포되었습니다!\n\nPackage ID: ${deployedPackageId}`);
+            } else {
+              // Fallback to old method if objectChanges is not available
+              const fallbackId = result.effects?.created?.[0]?.reference?.objectId;
+              if (fallbackId) {
+                console.log('Using fallback package ID:', fallbackId);
+                handlePackageDeployed(fallbackId);
+                alert(`🚀 패키지가 성공적으로 배포되었습니다!\n\nPackage ID: ${fallbackId}`);
+              } else {
+                console.log('Could not extract package ID from transaction result');
+                alert('🎉 트랜잭션이 성공했습니다!');
+              }
+            }
+            fetchSwimmers();
+          },
+          onError: (error) => {
+            console.error('Transaction failed:', error);
+            alert('트랜잭션 실패: ' + error.message);
+          },
+        }
+      );
+    } catch (error) {
+      console.error('Failed to execute transaction:', error);
+      alert('트랜잭션 실행 실패: ' + (error as Error).message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleMintFromTemplate = async () => {
+    if (!currentAccount && !isMockMode) {
+      alert('먼저 지갑을 연결해주세요!');
+      return;
+    }
+
+    if (!packageId) {
+      alert('먼저 스마트 컨트랙트를 배포해주세요!');
+      return;
+    }
+
+    const name = 'Template Swimmer';
+    const species = 'Template Species';
+    await handleMintSwimmer(name, species);
+  };
 
   const handleMintSwimmer = async (name: string, species: string) => {
     if (isMockMode) {
@@ -600,23 +721,13 @@ function GameplayContent() {
         {!isMockMode && (
           <section className="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-6">
             <DeployContract onPackageDeployed={setPackageId} />
-            <div className="bg-gray-50/80 border border-gray-200 rounded-xl p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <span className="text-2xl">💻</span>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800">코드 에디터</h3>
-                  <p className="text-sm text-gray-600">Move 코드를 작성하고 테스트해보세요</p>
-                </div>
-              </div>
-              <div className="bg-white/80 border border-gray-300 rounded-lg p-4 font-mono text-sm">
-                <div className="text-gray-600">
-                  // 실제 블록체인 모드에서는</div>
-                <div className="text-gray-600">
-                  // 코드 에디터를 통해 Move 코드를 작성할 수 있습니다</div>
-                <div className="text-green-600">
-                  console.log('실제 블록체인 모드 활성화');</div>
-              </div>
-            </div>
+            <CodeEditor 
+              onCompileAndDeploy={handleCompileAndDeploy}
+              onMint={handleMintFromTemplate}
+              disabled={!currentAccount || isLoading}
+              codeTemplate={ApiMoveCompiler.getSwimmerMoveTemplate()}
+              senderAddress={currentAccount?.address}
+            />
           </section>
         )}
 

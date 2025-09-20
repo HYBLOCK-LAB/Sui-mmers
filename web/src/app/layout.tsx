@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import '@/styles/globals.css';
 import '@mysten/dapp-kit/dist/index.css';
 import { Header } from '@/components/Header';
 import { Providers } from '@/app/providers';
+import { Button } from '@/components/ui/button';
 
 export const metadata: Metadata = {
   title: 'Sui-mmers',

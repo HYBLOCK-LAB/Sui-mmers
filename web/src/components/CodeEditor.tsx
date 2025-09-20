@@ -4,6 +4,7 @@ import type { editor as MonacoEditor } from 'monaco-editor';
 import { DEFAULT_VALUES } from '@/src/contracts/moveTemplates';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { ApiMoveCompiler } from '@/lib/services/apiMoveCompiler';
 
 const Editor = dynamic(() => import('@monaco-editor/react'), {
   ssr: false,
@@ -21,10 +22,12 @@ const DiffEditor = dynamic(() => import('@monaco-editor/react').then((mod) => mo
 
 interface CodeEditorProps {
   onMint?: (name: string, species: string) => void | Promise<void>;
+  onCompileAndDeploy?: (transaction: any) => void | Promise<void>;
   disabled?: boolean;
   codeTemplate?: string;
   codeSkeletone?: string;
   readOnly?: boolean;
+  senderAddress?: string;
 }
 
 const FALLBACK_TEMPLATE = `module sui_mmers::example {
@@ -44,7 +47,74 @@ const normalize = (input: string): string =>
     .join('\n')
     .trim();
 
-export function CodeEditor({ onMint, disabled, codeTemplate, codeSkeletone, readOnly = false }: CodeEditorProps) {
+type DiffOp = {
+  type: 'equal' | 'add' | 'remove';
+  line: string;
+};
+
+const computeDiffOps = (current: string, solution: string): DiffOp[] => {
+  const currentLines = current.replace(/\r\n/g, '\n').split('\n');
+  const solutionLines = solution.replace(/\r\n/g, '\n').split('\n');
+  const m = currentLines.length;
+  const n = solutionLines.length;
+  const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+
+  for (let i = m - 1; i >= 0; i -= 1) {
+    for (let j = n - 1; j >= 0; j -= 1) {
+      if (currentLines[i] === solutionLines[j]) {
+        dp[i][j] = dp[i + 1][j + 1] + 1;
+      } else {
+        dp[i][j] = Math.max(dp[i + 1][j], dp[i][j + 1]);
+      }
+    }
+  }
+
+  const ops: DiffOp[] = [];
+  let i = 0;
+  let j = 0;
+
+  while (i < m && j < n) {
+    if (currentLines[i] === solutionLines[j]) {
+      ops.push({ type: 'equal', line: solutionLines[j] });
+      i += 1;
+      j += 1;
+    } else if (dp[i + 1][j] >= dp[i][j + 1]) {
+      ops.push({ type: 'remove', line: currentLines[i] });
+      i += 1;
+    } else {
+      ops.push({ type: 'add', line: solutionLines[j] });
+      j += 1;
+    }
+  }
+
+  while (i < m) {
+    ops.push({ type: 'remove', line: currentLines[i] });
+    i += 1;
+  }
+
+  while (j < n) {
+    ops.push({ type: 'add', line: solutionLines[j] });
+    j += 1;
+  }
+
+  return ops;
+};
+
+const createHintPlaceholder = (line: string): string => {
+  const indentMatch = line.match(/^(\s*)/);
+  const indent = indentMatch ? indentMatch[1] : '';
+  return indent + ' ';
+};
+
+export function CodeEditor({
+  onMint,
+  onCompileAndDeploy,
+  disabled,
+  codeTemplate,
+  codeSkeletone,
+  readOnly = false,
+  senderAddress,
+}: CodeEditorProps) {
   const [isDeploying, setIsDeploying] = useState(false);
   const [name] = useState('My Swimmer');
   const [species] = useState('Pacific Orca');
@@ -73,6 +143,25 @@ export function CodeEditor({ onMint, disabled, codeTemplate, codeSkeletone, read
   const [showHint, setShowHint] = useState(false);
   const [isEditorReady, setIsEditorReady] = useState(!hasChecker);
   const [isDiffReady, setIsDiffReady] = useState(false);
+
+  const hintMaskedSolution = useMemo(() => {
+    if (!showHint) {
+      return solutionCode;
+    }
+
+    const ops = computeDiffOps(code, solutionCode);
+    const maskedLines: string[] = [];
+
+    ops.forEach((op) => {
+      if (op.type === 'add') {
+        maskedLines.push(createHintPlaceholder(op.line));
+      } else if (op.type === 'equal') {
+        maskedLines.push(op.line);
+      }
+    });
+
+    return maskedLines.join('\n');
+  }, [showHint, code, solutionCode]);
 
   useEffect(() => {
     if (hasChecker) {
@@ -143,13 +232,45 @@ export function CodeEditor({ onMint, disabled, codeTemplate, codeSkeletone, read
   };
 
   const handleDeploy = async () => {
-    if (!onMint) return;
     setIsDeploying(true);
     try {
-      await onMint(name, species);
+      // If onCompileAndDeploy is provided, use compilation flow
+      if (onCompileAndDeploy && senderAddress) {
+        const currentCode = editorRef.current?.getValue() || solutionCode;
+        const transaction = await ApiMoveCompiler.createDeployTransaction('swimmer', currentCode, senderAddress);
+        await onCompileAndDeploy(transaction);
+      } else if (onCompileAndDeploy) {
+        throw new Error('Sender address is required for deployment');
+      }
+      // Fallback to old mint flow
+      else if (onMint) {
+        await onMint(name, species);
+      }
     } catch (error) {
       console.error('Deploy failed:', error);
-      alert('Deployment failed: ' + (error as Error).message);
+    } finally {
+      setIsDeploying(false);
+    }
+  };
+
+  const handleMint = async () => {
+    setIsDeploying(true);
+    try {
+      // If onCompileAndDeploy is provided, use compilation flow
+      if (onCompileAndDeploy && senderAddress) {
+        console.log('Compiling Move code with sender:', senderAddress);
+        const currentCode = editorRef.current?.getValue() || solutionCode;
+        const transaction = await ApiMoveCompiler.createDeployTransaction('swimmer', currentCode, senderAddress);
+        await onCompileAndDeploy(transaction);
+      } else if (onCompileAndDeploy) {
+        throw new Error('Sender address is required for deployment');
+      }
+      // Fallback to old mint flow
+      else if (onMint) {
+        await onMint(name, species);
+      }
+    } catch (error) {
+      console.error('Deploy failed:', error);
     } finally {
       setIsDeploying(false);
     }
@@ -190,12 +311,14 @@ export function CodeEditor({ onMint, disabled, codeTemplate, codeSkeletone, read
     setIsDiffReady(false);
   };
 
+  const editorHeightClass = showHint || showSolution ? 'min-h-[440px]' : 'min-h-[320px]';
+
   return (
     <Card className="flex h-full flex-1 flex-col">
       <CardHeader>
-        <CardTitle>Code Playground</CardTitle>
+        <CardTitle>Code Editer</CardTitle>
       </CardHeader>
-      <CardContent className="min-h-[320px] flex-1">
+      <CardContent className={`flex-1 ${editorHeightClass}`}>
         {hasChecker ? (
           showSolution ? (
             <DiffEditor
@@ -216,7 +339,7 @@ export function CodeEditor({ onMint, disabled, codeTemplate, codeSkeletone, read
           ) : showHint ? (
             <DiffEditor
               original={code}
-              modified={solutionCode}
+              modified={hintMaskedSolution}
               language="rust"
               beforeMount={() => setIsEditorReady(false)}
               onMount={handleHintDiffEditorMount}
@@ -271,7 +394,9 @@ export function CodeEditor({ onMint, disabled, codeTemplate, codeSkeletone, read
             {status === 'success' ? (
               <span className="text-emerald-600">Great job! Your solution matches the reference implementation.</span>
             ) : status === 'error' ? (
-              <span className="text-red-600">Not quite there yet. Compare with the reference or keep iterating.</span>
+              <span className="text-red-600 font-semibold">
+                Not quite there yet. Compare with the reference or keep iterating.
+              </span>
             ) : (
               <span className="text-gray-600">
                 Fill in the missing pieces, then check your answer when you are ready.
@@ -295,20 +420,25 @@ export function CodeEditor({ onMint, disabled, codeTemplate, codeSkeletone, read
               </>
             )}
             {showSolution && (
-              <Button variant="outline" onClick={() => setShowSolution(false)} disabled={!isDiffReady}>
+              <Button variant="outline" onClick={() => setShowSolution(false)}>
                 Back to editor
               </Button>
             )}
           </div>
         </CardFooter>
       ) : (
-        onMint && (
-          <CardFooter className="justify-end">
+        <CardFooter className="justify-between gap-2">
+          {handleDeploy && (
             <Button onClick={handleDeploy} disabled={disabled || isDeploying} size="lg" className="w-full">
-              {isDeploying ? 'Processing...' : 'Mint Swimmer from Template'}
+              {isDeploying ? 'Processing...' : onCompileAndDeploy ? 'Compile & Deploy' : 'Mint Swimmer from Template'}
             </Button>
-          </CardFooter>
-        )
+          )}
+          {handleDeploy && (
+            <Button onClick={handleDeploy} disabled={disabled || isDeploying} size="lg" className="w-full">
+              {isDeploying ? 'Processing...' : onMint ? 'Mint' : 'Mint Swimmer from Template'}
+            </Button>
+          )}
+        </CardFooter>
       )}
     </Card>
   );

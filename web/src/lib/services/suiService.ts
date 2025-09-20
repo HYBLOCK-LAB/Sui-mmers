@@ -13,7 +13,7 @@ export class SuiService {
     this.client = new SuiClient({ url: rpcUrl })
   }
 
-  // 수영 선수 NFT 민팅 트랜잭션 빌드
+  // 수영 선수 NFT 민팅 트랜잭션 빌드 (간단한 버전)
   async buildMintSwimmerTx(
     packageId: string,
     name: string,
@@ -26,7 +26,6 @@ export class SuiService {
       arguments: [
         tx.pure.string(name),
         tx.pure.string(species),
-        tx.object(CLOCK_OBJECT_ID),
       ],
     })
 

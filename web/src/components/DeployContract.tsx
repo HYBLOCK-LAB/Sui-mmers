@@ -22,7 +22,7 @@ export function DeployContract({ onPackageDeployed }: DeployContractProps) {
 
   // localStorage에서 패키지 ID 로드
   useEffect(() => {
-    const savedPackageId = localStorage.getItem('sui_swimming_package_id')
+    const savedPackageId = localStorage.getItem('smr-package-id')
     if (savedPackageId && MoveCompiler.isValidPackageAddress(savedPackageId)) {
       setPackageId(savedPackageId)
       onPackageDeployed(savedPackageId)
@@ -54,12 +54,14 @@ export function DeployContract({ onPackageDeployed }: DeployContractProps) {
 
   const handleDeploy = async () => {
     if (!currentAccount) {
-      alert('먼저 지갑을 연결해주세요!')
+      console.error('먼저 지갑을 연결해주세요!')
+      setErrorMessage('먼저 지갑을 연결해주세요!')
       return
     }
 
     if (!compilerReady) {
-      alert('컴파일러가 아직 준비중입니다. 잠시 후 다시 시도해주세요.')
+      console.error('컴파일러가 아직 준비중입니다. 잠시 후 다시 시도해주세요.')
+      setErrorMessage('컴파일러가 아직 준비중입니다')
       return
     }
 
@@ -75,7 +77,7 @@ export function DeployContract({ onPackageDeployed }: DeployContractProps) {
       
       // 브라우저에서 Move 코드 컴파일 및 배포 트랜잭션 생성
       console.log('📝 Compiling Move code in browser...')
-      const tx = await BrowserMoveCompiler.createDeployTransaction('swimmer', moveSource)
+      const tx = await BrowserMoveCompiler.createDeployTransaction('swimmer', moveSource, currentAccount.address)
       
       console.log('✅ Move code compiled successfully in browser!')
       console.log('📤 Submitting deployment transaction...')
@@ -84,25 +86,59 @@ export function DeployContract({ onPackageDeployed }: DeployContractProps) {
       signAndExecute(
         {
           transaction: tx,
+          options: {
+            showObjectChanges: true,
+            showEffects: true,
+            showEvents: true,
+          },
         },
         {
-          onSuccess: (result) => {
+          onSuccess: async (result) => {
             console.log('Deploy transaction successful:', result)
             
-            // 패키지 ID 추출
-            const newPackageId = MoveCompiler.extractPackageId(result)
+            // 패키지 ID 추출 시도
+            let newPackageId = MoveCompiler.extractPackageId(result)
+            
+            // 만약 패키지 ID를 찾지 못했다면 RPC로 직접 조회
+            if (!newPackageId && result.digest) {
+              console.log('Fetching transaction details from RPC...')
+              try {
+                const response = await fetch('https://sui-testnet-rpc.publicnode.com', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: 1,
+                    method: 'sui_getTransactionBlock',
+                    params: [result.digest, { showObjectChanges: true }]
+                  })
+                })
+                const rpcResult = await response.json()
+                if (rpcResult.result?.objectChanges) {
+                  const published = rpcResult.result.objectChanges.find(
+                    (change: any) => change.type === 'published'
+                  )
+                  if (published?.packageId) {
+                    newPackageId = published.packageId
+                    console.log('Found package ID from RPC:', newPackageId)
+                  }
+                }
+              } catch (error) {
+                console.error('Failed to fetch transaction from RPC:', error)
+              }
+            }
             
             if (newPackageId) {
               setPackageId(newPackageId)
               setDeployStatus('success')
               
               // localStorage에 저장
-              localStorage.setItem('sui_swimming_package_id', newPackageId)
+              localStorage.setItem('smr-package-id', newPackageId)
               
               // 부모 컴포넌트에 알림
               onPackageDeployed(newPackageId)
               
-              alert(`✅ 스마트 컨트랙트가 성공적으로 배포되었습니다!\n패키지 ID: ${newPackageId}`)
+              console.log(`✅ 스마트 컨트랙트가 성공적으로 배포되었습니다! 패키지 ID: ${newPackageId}`)
             } else {
               throw new Error('패키지 ID를 추출할 수 없습니다')
             }
@@ -111,7 +147,6 @@ export function DeployContract({ onPackageDeployed }: DeployContractProps) {
             console.error('Deploy transaction failed:', error)
             setDeployStatus('error')
             setErrorMessage(error.message || '배포 실패')
-            alert('❌ 배포 실패: ' + error.message)
           },
         }
       )
@@ -119,14 +154,13 @@ export function DeployContract({ onPackageDeployed }: DeployContractProps) {
       console.error('Deploy failed:', error)
       setDeployStatus('error')
       setErrorMessage((error as Error).message)
-      alert('❌ 배포 실패: ' + (error as Error).message)
     } finally {
       setIsDeploying(false)
     }
   }
 
   const handleReset = () => {
-    localStorage.removeItem('sui_swimming_package_id')
+    localStorage.removeItem('smr-package-id')
     setPackageId(null)
     setDeployStatus('idle')
     setErrorMessage('')
