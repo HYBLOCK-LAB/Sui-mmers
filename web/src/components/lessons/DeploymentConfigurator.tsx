@@ -12,8 +12,8 @@ const START_LOCATIONS = [
 
 export type DeploymentConfig = {
   swimmerColor: string;
-  tunaColor?: string;
-  tunaSize?: 'small' | 'medium' | 'large';
+  color?: string;
+  size?: 'small' | 'medium' | 'large';
   startingLocation: string;
   startingDistance: number;
   baseSpeed: number;
@@ -26,7 +26,7 @@ const BASE_DEPLOYMENT_CONFIG: DeploymentConfig = {
   startingDistance: 0,
   baseSpeed: DEFAULT_VALUES.baseSpeedPerHour,
   sprintBonus: DEFAULT_VALUES.tunaBonus,
-  tunaSize: 'medium',
+  size: 'medium',
 };
 
 export const createDefaultDeploymentConfig = (): DeploymentConfig => ({ ...BASE_DEPLOYMENT_CONFIG });
@@ -210,17 +210,17 @@ export function DeploymentConfigurator({ markdown, config, onConfigChange, lesso
               <div className="mt-2 flex items-center gap-3">
                 <input
                   type="color"
-                  value={config.tunaColor || '#c0c0c0'}
-                  onChange={(event) => updateConfig({ tunaColor: event.target.value })}
+                  value={config.color || '#3194be'}
+                  onChange={(event) => updateConfig({ color: event.target.value })}
                   className="h-10 w-14 cursor-pointer rounded border border-gray-200 bg-white"
                   aria-label="Select tuna can color"
                 />
                 <input
                   type="text"
-                  value={config.tunaColor || '#c0c0c0'}
-                  onChange={(event) => updateConfig({ tunaColor: event.target.value })}
+                  value={config.color || '#3194be'}
+                  onChange={(event) => updateConfig({ color: event.target.value })}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                  placeholder="#c0c0c0"
+                  placeholder="#3194be"
                 />
               </div>
             </div>
@@ -278,8 +278,8 @@ export function DeploymentConfigurator({ markdown, config, onConfigChange, lesso
             <div>
               <label className="text-xs font-semibold uppercase tracking-wide text-gray-600">Tuna size</label>
               <select
-                value={config.tunaSize || 'medium'}
-                onChange={(event) => updateConfig({ tunaSize: event.target.value as 'small' | 'medium' | 'large' })}
+                value={config.size || 'medium'}
+                onChange={(event) => updateConfig({ c: event.target.value as 'small' | 'medium' | 'large' })}
                 className="mt-2 w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 text-base"
               >
                 <option value="small">Small (+5 hunger)</option>
@@ -341,7 +341,7 @@ export function DeploymentPreview({ config, lessonSlug, chapterSlug }: Deploymen
   useEffect(() => {
     const loadAndRecolorAllFrames = async () => {
       const hue = hexToHue(config.swimmerColor)
-      const tunaHue = config.tunaColor ? hexToHue(config.tunaColor) : 0
+      const tunaHue = config.color ? hexToHue(config.color) : 0
       const newImages = new Map(recoloredImages)
       
       // 각 프레임에 대해 색상 재적용
@@ -358,7 +358,7 @@ export function DeploymentPreview({ config, lessonSlug, chapterSlug }: Deploymen
       }
 
       // tuna can 색상 변경
-      if (config.tunaColor) {
+      if (config.color) {
         const tunaImg = new Image()
         tunaImg.onload = () => {
           const recoloredTuna = recolorImageByHue(tunaImg, tunaHue, 196, 199)
@@ -372,9 +372,9 @@ export function DeploymentPreview({ config, lessonSlug, chapterSlug }: Deploymen
     }
 
     loadAndRecolorAllFrames()
-  }, [config.swimmerColor, config.tunaColor])
+  }, [config.swimmerColor, config.color])
 
-  const currentSwimImage = recoloredImages.get(`swimmer-frame-${[1, 2, 3, 2][swimFrame % 4]}`) || `/images/mint(${[1, 2, 3, 2][swimFrame % 4]}).png`
+  const currentSwimImage = recoloredImages.get(`swimmer-frame-${[1, 2, 3, 2][swimFrame % 4]}`) || `/images/mint_water(${[1, 2, 3, 2][swimFrame % 4]}).png`
 
   const isTunaChapter = lessonSlug === 'ptb-and-items' && chapterSlug === 'deploy-tuna';
 
@@ -387,20 +387,20 @@ export function DeploymentPreview({ config, lessonSlug, chapterSlug }: Deploymen
       <CardContent className="space-y-3 text-sm">
         <div className="flex justify-center">
           {!isTunaChapter && (
-            <div className="relative w-40 h-40">
+            <div className="relative w-[400px] h-[400px]">
               <img
                 src={currentSwimImage}
                 alt="Swimmer"
-                className="w-40 h-40 object-contain"
+                className="w-[400px] h-[400px] object-contain"
               />
             </div>
           )}
           {isTunaChapter && (
-            <div className="relative w-24 h-24">
+            <div className="relative w-[550px] h-[550px]">
               <img
                 src={recoloredImages.get('tuna-can') || '/images/tuna_can.png'}
                 alt="Tuna Can"
-                className="w-24 h-24 object-contain"
+                className="w-[550px] h-[550px] object-contain"
               />
             </div>
           )}
