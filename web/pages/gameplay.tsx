@@ -339,100 +339,24 @@ export default function Gameplay() {
 
         <section className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">🏊 수영장</h2>
-            <span className="text-xs text-gray-500">Swimmer 위치는 자동 전진에 따라 갱신됩니다.</span>
+            <h2 className="text-lg font-semibold text-gray-900">🏊 수영장 & 게임 콘솔</h2>
+            <span className="text-xs text-gray-500">실시간으로 Swimmer를 조작하고 관전하세요</span>
           </div>
-          <SwimmingPool swimmers={swimmers} />
-        </section>
-
-        <section className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between mb-6">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">🎮 Gameplay Console</h2>
-              <p className="text-sm text-gray-600">Programmable Transaction Block으로 Swimmer와 TunaCan을 동시에 다뤄보세요.</p>
-            </div>
-            <div className="text-xs text-gray-500">인벤토리 {tunaCans.length}개</div>
-          </div>
-
-          <div className="space-y-6">
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Swimmer 선택</label>
-              <select
-                value={selectedSwimmerId}
-                onChange={(event) => setSelectedSwimmerId(event.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                disabled={swimmers.length === 0}
-              >
-                {swimmers.length === 0 ? (
-                  <option>먼저 Swimmer를 민팅하세요</option>
-                ) : (
-                  swimmers.map((swimmer) => (
-                    <option key={swimmer.id} value={swimmer.id}>
-                      {swimmer.name} · {swimmer.distanceTraveled}m
-                    </option>
-                  ))
-                )}
-              </select>
-              {selectedSwimmer && (
-                <p className="mt-1 text-xs text-gray-500">
-                  기본 속도 {selectedSwimmer.baseSpeedPerHour}m/h · 마지막 업데이트 {new Date(selectedSwimmer.lastUpdateTimestampMs).toLocaleString()}
-                </p>
-              )}
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <Button
-                onClick={handleUpdateProgress}
-                disabled={!packageId || !currentAccount || !selectedSwimmerId || actionLoading === 'update'}
-                size="sm"
-              >
-                {actionLoading === 'update' ? '업데이트 중...' : '⏱ 자동 전진'}
-              </Button>
-              <Button
-                onClick={handleMintTuna}
-                disabled={!packageId || !currentAccount || actionLoading === 'mintTuna'}
-                variant="secondary"
-                size="sm"
-              >
-                {actionLoading === 'mintTuna' ? '민팅 중...' : '🍣 참치 민팅'}
-              </Button>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">TunaCan 인벤토리</label>
-              <select
-                value={selectedTunaId}
-                onChange={(event) => setSelectedTunaId(event.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                disabled={tunaCans.length === 0}
-              >
-                {tunaCans.length === 0 ? (
-                  <option>참치를 민팅하면 여기에 표시됩니다</option>
-                ) : (
-                  tunaCans.map((tuna) => (
-                    <option key={tuna.id} value={tuna.id}>
-                      {tuna.id.slice(0, 6)}...{tuna.id.slice(-4)} · +{tuna.energy}m
-                    </option>
-                  ))
-                )}
-              </select>
-              {selectedTuna && (
-                <p className="mt-1 text-xs text-gray-500">보너스 거리 +{selectedTuna.energy}m</p>
-              )}
-            </div>
-
-            <Button
-              onClick={handleEatTuna}
-              disabled={!packageId || !currentAccount || !selectedSwimmerId || !selectedTunaId || actionLoading === 'eatTuna'}
-              size="sm"
-              className="w-full md:w-auto"
-            >
-              {actionLoading === 'eatTuna' ? '처리 중...' : '🍽 Swimmer에게 먹이기'}
-            </Button>
-
-            <div className="rounded-lg bg-gray-50 border border-gray-200 p-4 text-sm text-gray-600">
-              <p>✅ 순서 팁: <span className="font-semibold text-gray-800">update_progress → mint_tuna → eat_tuna</span> 흐름으로 PTB를 구성하면 안전하게 자동 전진과 아이템 소비를 결합할 수 있습니다.</p>
-            </div>
+          <div className="h-auto">
+            <SwimmingPool 
+              swimmers={swimmers}
+              tunaCans={tunaCans}
+              selectedSwimmerId={selectedSwimmerId}
+              selectedTunaId={selectedTunaId}
+              onSwimmerSelect={setSelectedSwimmerId}
+              onTunaSelect={setSelectedTunaId}
+              onUpdateProgress={handleUpdateProgress}
+              onMintTuna={handleMintTuna}
+              onEatTuna={handleEatTuna}
+              actionLoading={actionLoading}
+              packageId={packageId}
+              currentAccount={currentAccount}
+            />
           </div>
         </section>
       </main>
