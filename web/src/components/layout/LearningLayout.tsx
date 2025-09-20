@@ -1,37 +1,89 @@
-'use client';
+﻿'use client';
 
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
-import { Button } from '@/components/ui/button';
-import { Sidebar } from './SideBar';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+  useEffect,
+  type ReactNode,
+} from 'react'
+import { Button } from '@/components/ui/button'
+import { Sidebar } from './SideBar'
 
 interface SidebarContextValue {
-  isSidebarOpen: boolean;
-  openSidebar: () => void;
-  closeSidebar: () => void;
-  toggleSidebar: () => void;
+  isSidebarOpen: boolean
+  openSidebar: () => void
+  closeSidebar: () => void
+  toggleSidebar: () => void
+  activeLessonSlug?: string
+  activeChapterSlug?: string
+  setActive: (lessonSlug?: string, chapterSlug?: string) => void
 }
 
-const SidebarContext = createContext<SidebarContextValue | null>(null);
+const SidebarContext = createContext<SidebarContextValue | null>(null)
 
 export function useSidebar() {
-  const context = useContext(SidebarContext);
+  const context = useContext(SidebarContext)
   if (!context) {
-    throw new Error('useSidebar must be used within a LearningLayout');
+    throw new Error('useSidebar must be used within a LearningLayout')
   }
-  return context;
+  return context
+}
+
+export function useLessonNavigation() {
+  const context = useSidebar()
+  const setActive = useCallback(
+    (lessonSlug?: string, chapterSlug?: string) => {
+      context.setActive(lessonSlug, chapterSlug)
+    },
+    [context]
+  )
+
+  return {
+    activeLessonSlug: context.activeLessonSlug,
+    activeChapterSlug: context.activeChapterSlug,
+    setActive,
+  }
 }
 
 export function LearningLayout({ children }: { children: ReactNode }) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [activeLessonSlug, setActiveLessonSlug] = useState<string | undefined>()
+  const [activeChapterSlug, setActiveChapterSlug] = useState<string | undefined>()
 
-  const openSidebar = useCallback(() => setIsSidebarOpen(true), []);
-  const closeSidebar = useCallback(() => setIsSidebarOpen(false), []);
-  const toggleSidebar = useCallback(() => setIsSidebarOpen((prev) => !prev), []);
+  const openSidebar = useCallback(() => setIsSidebarOpen(true), [])
+  const closeSidebar = useCallback(() => setIsSidebarOpen(false), [])
+  const toggleSidebar = useCallback(() => setIsSidebarOpen((prev) => !prev), [])
+
+  const setActive = useCallback((lessonSlug?: string, chapterSlug?: string) => {
+    setActiveLessonSlug(lessonSlug)
+    setActiveChapterSlug(chapterSlug)
+  }, [])
 
   const providerValue = useMemo(
-    () => ({ isSidebarOpen, openSidebar, closeSidebar, toggleSidebar }),
-    [isSidebarOpen, openSidebar, closeSidebar, toggleSidebar]
-  );
+    () => ({
+      isSidebarOpen,
+      openSidebar,
+      closeSidebar,
+      toggleSidebar,
+      activeLessonSlug,
+      activeChapterSlug,
+      setActive,
+    }),
+    [isSidebarOpen, openSidebar, closeSidebar, toggleSidebar, activeLessonSlug, activeChapterSlug, setActive]
+  )
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      document.documentElement.classList.remove('overflow-hidden')
+      if (isSidebarOpen) {
+        document.documentElement.classList.add('overflow-hidden')
+      }
+      return () => document.documentElement.classList.remove('overflow-hidden')
+    }
+  }, [isSidebarOpen])
 
   return (
     <SidebarContext.Provider value={providerValue}>
@@ -39,7 +91,12 @@ export function LearningLayout({ children }: { children: ReactNode }) {
         <div className="container mx-auto px-4 py-12 lg:grid lg:grid-cols-[280px_1fr] lg:gap-10">
           <aside className="hidden lg:block">
             <div className="sticky top-24">
-              <Sidebar />
+              <Sidebar
+                showHeader
+                activeLessonSlug={activeLessonSlug}
+                activeChapterSlug={activeChapterSlug}
+                onNavigate={closeSidebar}
+              />
             </div>
           </aside>
 
@@ -49,14 +106,14 @@ export function LearningLayout({ children }: { children: ReactNode }) {
         <MobileSidebar />
       </div>
     </SidebarContext.Provider>
-  );
+  )
 }
 
 function MobileSidebar() {
-  const { isSidebarOpen, closeSidebar } = useSidebar();
+  const { isSidebarOpen, closeSidebar, activeLessonSlug, activeChapterSlug } = useSidebar()
 
   if (!isSidebarOpen) {
-    return null;
+    return null
   }
 
   return (
@@ -78,9 +135,14 @@ function MobileSidebar() {
           </Button>
         </div>
         <div className="p-6 max-h-[70vh] overflow-y-auto">
-          <Sidebar showHeader={false} />
+          <Sidebar
+            showHeader={false}
+            activeLessonSlug={activeLessonSlug}
+            activeChapterSlug={activeChapterSlug}
+            onNavigate={closeSidebar}
+          />
         </div>
       </div>
     </div>
-  );
+  )
 }
