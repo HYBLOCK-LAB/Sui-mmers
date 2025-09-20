@@ -31,10 +31,8 @@ export default function Home() {
         <div className="grid gap-10 md:grid-cols-2 md:items-center">
           <div className="space-y-6">
             <div className="space-y-4">
-              <h1 className="text-4xl font-bold text-gray-900">Learn Move & Sui like a game</h1>
-              <p className="text-base text-gray-600">
-                Gather your toolkit, follow structured lessons, and build on-chain adventures step by step.
-              </p>
+              <h1 className="text-4xl font-bold text-gray-900">Sui-mmers</h1>
+              <p className="text-base text-gray-600">Dive into Sui and Move through a fun swimming game!</p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <Button asChild size="lg" className="shadow-md">
