@@ -6,7 +6,7 @@ export default function LessonsIndexPage() {
   return (
     <LearningLayout>
       <div className="space-y-12">
-        <header className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+        <header className="bg-white/80 border border-gray-200 rounded-xl p-6 shadow-sm">
           <h1 className="text-3xl font-bold text-gray-900">Lesson library</h1>
           <p className="mt-2 text-sm text-gray-600">
             Browse every lesson and jump into the chapter that matches your progress.
@@ -18,7 +18,7 @@ export default function LessonsIndexPage() {
             const firstChapter = lesson.chapters[0];
 
             return (
-              <section key={lesson.slug} className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+              <section key={lesson.slug} className="bg-white/80 border border-gray-200 rounded-xl p-6 shadow-sm">
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div>
                     <p className="text-xs uppercase tracking-wide text-blue-600 font-semibold">Lesson</p>
@@ -28,7 +28,7 @@ export default function LessonsIndexPage() {
                   {firstChapter ? (
                     <Link
                       href={getLessonRoute(lesson.slug, firstChapter.slug)}
-                      className="inline-flex items-center justify-center rounded-md border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100"
+                      className="inline-flex items-center justify-center rounded-md border border-blue-200 bg-blue-50/80 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100/80"
                     >
                       Start lesson
                     </Link>
@@ -48,7 +48,7 @@ export default function LessonsIndexPage() {
                       </div>
                       <Link
                         href={getLessonRoute(lesson.slug, chapter.slug)}
-                        className="inline-flex items-center justify-center rounded-md border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                        className="inline-flex items-center justify-center rounded-md border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100/80"
                       >
                         View chapter
                       </Link>

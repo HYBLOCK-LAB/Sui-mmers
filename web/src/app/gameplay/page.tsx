@@ -483,7 +483,7 @@ function GameplayContent() {
   return (
     <div className="space-y-12">
       {/* 모드 토글 */}
-      <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+      <div className="bg-white/80 border border-gray-200 rounded-xl p-6 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-semibold text-gray-900">테스트 모드 선택</h3>
@@ -527,7 +527,7 @@ function GameplayContent() {
         </div>
       )}
 
-      <header className="bg-white border-b border-gray-200">
+      <header className="bg-white/80 border-b border-gray-200">
         <div className="flex flex-col gap-4 px-4 py-6 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-sm font-semibold text-purple-600">🎮 Gameplay Console</p>
@@ -573,7 +573,7 @@ function GameplayContent() {
       <main className="space-y-12">
         {/* 상태 표시 */}
         <section className="grid gap-6 md:grid-cols-3">
-          <div className="rounded-xl border border-blue-100 bg-blue-50 px-5 py-4">
+          <div className="rounded-xl border border-blue-100 bg-blue-50/80 px-5 py-4">
             <p className="text-xs uppercase text-blue-600 font-semibold">
               {isMockMode ? 'Mock 지갑' : '연결된 지갑'}
             </p>
@@ -583,11 +583,11 @@ function GameplayContent() {
                 : '지갑 미연결'}
             </p>
           </div>
-          <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-5 py-4">
+          <div className="rounded-xl border border-emerald-100 bg-emerald-50/80 px-5 py-4">
             <p className="text-xs uppercase text-emerald-600 font-semibold">보유한 Swimmer</p>
             <p className="mt-2 text-2xl font-bold text-emerald-700">{swimmers.length}</p>
           </div>
-          <div className="rounded-xl border border-purple-100 bg-purple-50 px-5 py-4">
+          <div className="rounded-xl border border-purple-100 bg-purple-50/80 px-5 py-4">
             <p className="text-xs uppercase text-purple-600 font-semibold">패키지 상태</p>
             <p className="mt-2 text-sm text-gray-800">
               {isMockMode ? '✅ Mock 모드: 준비 완료' : (packageId ? '✅ 준비 완료' : '배포 필요')}
@@ -600,7 +600,7 @@ function GameplayContent() {
         {!isMockMode && (
           <section className="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-6">
             <DeployContract onPackageDeployed={setPackageId} />
-            <div className="bg-gray-50 border border-gray-200 rounded-xl p-6">
+            <div className="bg-gray-50/80 border border-gray-200 rounded-xl p-6">
               <div className="flex items-center gap-3 mb-4">
                 <span className="text-2xl">💻</span>
                 <div>
@@ -608,7 +608,7 @@ function GameplayContent() {
                   <p className="text-sm text-gray-600">Move 코드를 작성하고 테스트해보세요</p>
                 </div>
               </div>
-              <div className="bg-white border border-gray-300 rounded-lg p-4 font-mono text-sm">
+              <div className="bg-white/80 border border-gray-300 rounded-lg p-4 font-mono text-sm">
                 <div className="text-gray-600">
                   // 실제 블록체인 모드에서는</div>
                 <div className="text-gray-600">
@@ -622,7 +622,7 @@ function GameplayContent() {
 
         {/* Mock 모드 배포 상태 표시 */}
         {isMockMode && (
-          <section className="bg-green-50 border border-green-200 rounded-xl p-6">
+          <section className="bg-green-50/80 border border-green-200 rounded-xl p-6">
             <div className="flex items-center gap-3 mb-4">
               <span className="text-2xl">📦</span>
               <div>
@@ -630,7 +630,7 @@ function GameplayContent() {
                 <p className="text-sm text-green-600">Mock 모드에서는 이미 배포된 상태입니다</p>
               </div>
             </div>
-            <div className="bg-green-100 border border-green-300 rounded-lg p-4">
+            <div className="bg-green-100/80 border border-green-300 rounded-lg p-4">
               <div className="flex items-center gap-2">
                 <span className="text-green-600">✅</span>
                 <div>
@@ -643,7 +643,7 @@ function GameplayContent() {
         )}
 
         {/* 수영장 & 게임 콘솔 */}
-        <section className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+        <section className="bg-white/80 border border-gray-200 rounded-xl p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900">🏊 수영장 & 게임 콘솔</h2>
             <span className="text-xs text-gray-500">

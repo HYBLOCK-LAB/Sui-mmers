@@ -129,7 +129,7 @@ export function LessonDescription({ title, markdown, className }: LessonDescript
   return (
     <div
       className={cn(
-        'flex flex-1 flex-col bg-white border border-gray-200 rounded-xl p-6 shadow-sm text-gray-800',
+        'flex flex-1 flex-col bg-white/80 border border-gray-200 rounded-xl p-6 shadow-sm text-gray-800',
         className
       )}
     >

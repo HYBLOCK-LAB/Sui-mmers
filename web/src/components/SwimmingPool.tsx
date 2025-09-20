@@ -266,7 +266,7 @@ export function SwimmingPool({
         </div>
 
         {/* 게임 콘솔 컨트롤 패널 */}
-        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+        <div className="bg-white/80 border border-gray-200 rounded-xl p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900">🎮 게임 콘솔</h3>
             <span className="text-xs text-gray-500">인벤토리 {tunaCans.length}개</span>
@@ -339,7 +339,7 @@ export function SwimmingPool({
                   alt="Swimmer" 
                   className="w-12 h-12" 
                 />
-                <div className="ml-3 bg-white/90 rounded-lg px-3 py-1 shadow">
+                <div className="ml-3 bg-white/70 rounded-lg px-3 py-1 shadow">
                   <div className="font-bold text-sm">{swimmer.name}</div>
                   <div className="text-xs text-gray-600">
                     {swimmer.species}
@@ -354,7 +354,7 @@ export function SwimmingPool({
         </div>
         
         {/* 능력치 표시 */}
-        <div className="absolute top-4 right-4 bg-white/90 rounded-lg p-3 shadow">
+        <div className="absolute top-4 right-4 bg-white/70 rounded-lg p-3 shadow">
           <h4 className="font-semibold text-sm mb-2">선수 현황</h4>
           {swimmers.map(swimmer => (
             <div key={swimmer.id} className="text-xs mb-1">
@@ -369,7 +369,7 @@ export function SwimmingPool({
       </div>
       
       {/* 게임 콘솔 컨트롤 패널 */}
-      <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+      <div className="bg-white/80 border border-gray-200 rounded-xl p-6 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900">🎮 게임 콘솔</h3>
           <span className="text-xs text-gray-500">인벤토리 {tunaCans.length}개</span>

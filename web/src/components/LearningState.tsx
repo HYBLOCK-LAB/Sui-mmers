@@ -8,7 +8,7 @@ interface ILearningStateProps {
 
 export function AssetsState({ currentAccount, swimmers, packageId }: ILearningStateProps) {
   return (
-    <section className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+    <section className="bg-white/80 border border-gray-200 rounded-xl p-6 shadow-sm">
       <h2 className="text-lg font-semibold text-gray-900">Progress snapshot</h2>
       <p className="mt-3 text-sm text-gray-600">
         Check your current wallet, swimmer count, and package status at a glance.

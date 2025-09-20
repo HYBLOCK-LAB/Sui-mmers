@@ -87,7 +87,7 @@ export function LearningLayout({ children }: { children: ReactNode }) {
 
   return (
     <SidebarContext.Provider value={providerValue}>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen">
         <div className="container mx-auto px-4 py-12 lg:grid lg:grid-cols-[280px_1fr] lg:gap-10">
           <aside className="hidden lg:block">
             <div className="sticky top-24">
@@ -122,7 +122,7 @@ function MobileSidebar() {
       onClick={closeSidebar}
     >
       <div
-        className="max-w-lg w-full bg-white rounded-2xl shadow-xl overflow-hidden"
+        className="max-w-lg w-full bg-white/90 rounded-2xl shadow-xl overflow-hidden"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50">
