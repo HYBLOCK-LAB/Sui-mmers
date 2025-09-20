@@ -48,20 +48,21 @@ export function SwimmingPool({
     return animationSequence[animationFrame % animationSequence.length]
   }
   
-  // 방향에 따른 이미지 경로 생성
-  const getSwimmerImagePath = (frame: number, direction: 'right' | 'left' = 'right') => {
-    if (direction === 'left') {
-      return `/images/mint_flipped(${frame}).png`
-    }
-    return `/images/mint(${frame}).png`
-  }
+  // // 방향에 따른 이미지 경로 생성
+  // const getSwimmerImagePath = (frame: number, direction: 'right' | 'left' = 'right') => {
+  //   if (direction === 'left') {
+  //     return `/images/mint_water_flipped(${frame}).png`
+  //   }
+  //   return `/images/mint_water(${frame}).png`
+  // }
+  const getSwimmerImagePath = (frame:number) => `/images/mint_water(${frame}).png`
   
-  // 수영 선수의 이동 방향 감지 (단순화된 버전)
-  const getSwimmerDirection = (swimmer: SwimmerSummary, index: number): 'right' | 'left' => {
-    // 실제로는 이전 위치와 현재 위치를 비교해서 방향을 결정해야 하지만
-    // 간단하게 인덱스에 따라 방향을 번갈아 설정
-    return index % 2 === 0 ? 'right' : 'left'
-  }
+  // // 수영 선수의 이동 방향 감지 (단순화된 버전)
+  // const getSwimmerDirection = (swimmer: SwimmerSummary, index: number): 'right' | 'left' => {
+  //   // 실제로는 이전 위치와 현재 위치를 비교해서 방향을 결정해야 하지만
+  //   // 간단하게 인덱스에 따라 방향을 번갈아 설정
+  //   return index % 2 === 0 ? 'right' : 'left'
+  // }
 
   // 이미지 색상 변경 함수들
   const rgbToHsl = (r: number, g: number, b: number) => {
@@ -194,7 +195,8 @@ export function SwimmingPool({
               setRecoloredImages(new Map(newImages))
             }
           }
-          img.src = getSwimmerImagePath(frame, direction)
+          // img.src = getSwimmerImagePath(frame, direction)
+          img.src = getSwimmerImagePath(frame)
         }
       }
     }
@@ -249,7 +251,7 @@ export function SwimmingPool({
           <div className="relative flex items-center justify-center h-full">
             <div className="text-center bg-white/80 rounded-lg p-6">
               <img 
-                src={recoloredImages.get(`swimmer-right-frame-${getCurrentFrame()}`) || `/images/mint(${getCurrentFrame()}).png`} 
+                src={recoloredImages.get(`swimmer-right-frame-${getCurrentFrame()}`) || `/images/mint_water(${getCurrentFrame()}).png`} 
                 alt="Swimmer" 
                 className="w-16 h-16 mx-auto mb-4" 
               />
@@ -311,15 +313,16 @@ export function SwimmingPool({
         {/* 아이템 표시 */}
         <div className="absolute top-4 left-4">
           <img src="/images/tuna_can.png" alt="Tuna Can" className="w-8 h-8" />
-          <img src="/images/tuna_floating.png" alt="Tuna Floating" className="w-8 h-8 ml-2" />
+          {/* <img src="/images/tuna_floating.png" alt="Tuna Floating" className="w-8 h-8 ml-2" /> */}
         </div>
         
         {/* 수영 선수들 */}
         <div className="relative h-full">
           {swimmers.map((swimmer, index) => {
             const currentFrame = getCurrentFrame()
-            const direction = getSwimmerDirection(swimmer, index)
-            const frameImage = recoloredImages.get(`swimmer-${direction}-frame-${currentFrame}`) || getSwimmerImagePath(currentFrame, direction)
+            // const direction = getSwimmerDirection(swimmer, index)
+            // const frameImage = recoloredImages.get(`swimmer-${direction}-frame-${currentFrame}`) || getSwimmerImagePath(currentFrame, direction)
+            const frameImage = recoloredImages.get(`swimmer-frame-${currentFrame}`)
             
             return (
               <div

@@ -46,29 +46,54 @@ We'll build the skeleton of our swimmer with Move, attach a progress system that
 
 In this lesson, you become the owner of a great (and perhaps a little silly) swimmer. This swimmer isn't just a picture; it's a living NFT (Non-Fungible Token) on the blockchain. In Sui, all NFTs are called 'Objects'. Just as every physical thing is an object in reality, every digital asset on the Sui blockchain exists as a unique object.
 
-Right now, we're going to use the Move language to create the blueprint for our swimmer object. This blueprint is called a \`struct\`. A \`struct\` is like a skeleton that defines what information our swimmer is made of, such as 'name', 'species', and 'distance traveled'.
+Right now, we're going to use the Move language to create the blueprint for our swimmer object. This blueprint is called a \`struct\`. A \`struct\` is like a skeleton that defines what information our swimmer is made of, such as 'name', 'speed', and 'distance traveled'.
 
 And then, we'll add the most important magic words: \`has key\`. This keyword declares that the \`struct\` we've created isn't just a bundle of data, but can become an 'Object' that can exist independently with a unique ID on the blockchain. Now, shall we create the blueprint for our first swimmer?"
 
 **Practice**
 
-"In the code editor to your right, create a \`struct\` named Swimmer. Every swimmer must have an id to be uniquely identified on the blockchain and a \`distance_traveled\` value to show how far they've gone."`,
+In the code editor to your right, create a \`struct\` named Swimmer. It should contain the following fields to represent the swimmer's various attributes:
+
+- \`id\`: Use the UID type, which is Sui's special type for unique object identifiers on the blockchain.
+
+- \`name\`: Use the String type to store the swimmer's name.
+
+- \`color\`: Use the String type to store a hex color code (e.g., "#FFFFFF").
+
+- \`speed\`: Use the u64 type for the speed value. u64 is a 64-bit unsigned integer, perfect for non-negative numbers.
+
+- \`hunger\`: Use the u64 type for the hunger level.
+
+- \`boost\`: Use the u64 type for the boost level.
+
+- \`distance_traveled\`: Use the u64 type to show how far the swimmer has gone.
+
+Please remove the **TODO** comments.`,
         readonly: false,
         codeTemplate: `module sui_mmers::swimmer_struct {
     use sui::object::{Self, UID};
+    use std::string::String;
 
+    // has key: This ability indicates that the struct can become an 
+    // independent object with a unique ID on-chain.
     public struct Swimmer has key {
         id: UID,
+        name: String,
+        color: String,
+        speed: u64,
+        hunger: u64,
+        boost: u64,
         distance_traveled: u64,
     }
 }
 `,
         codeSkeletone: `module sui_mmers::swimmer_struct {
         use sui::object::{Self, UID};
-
+        
+        // has key: This ability indicates that the struct can become an 
+        // independent object with a unique ID on-chain.
         public struct Swimmer has key {
             id: UID,
-            distance_traveled: u64,
             // TODO: add any additional swimmer fields needed for later chapters.
         }
     }
@@ -89,60 +114,67 @@ In Move, a special function that can be called by anyone from the outside is mar
 
 When the function executes, we'll create a new object according to the \`Swimmer\` blueprint and use the magic of transfer to pass the ownership of this NFT to you—the person who called the function! Thanks to transfer, the blockchain will clearly record that this swimmer is now your property."
 
-**Practice**
+Practice
+Add a public entry fun named \`mint_swimmer\`. This function should create a new \`Swimmer\` object based on user inputs and initial default values, and then transfer it to the person who called the function (the sender).
 
-Add a \`mint_swimmer\` function. This function should take a \`name\` and \`species\`, create a new \`Swimmer\` object, and then transfer it to the person who called the function (\`the sender\`).`,
+Function Parameters:
+The function should accept the initial attributes that define the swimmer's appearance and base ability. It should take the following parameters:
+
+\`name\` (as \`vector<u8>\`)
+
+\`color\` (as \`vector<u8>\`)
+
+\`speed\` (as \`u64\`)
+
+About Default Values:
+Not all attributes need to be passed in by the user. Inside the function, you should initialize some fields with sensible starting values. A new swimmer begins their journey at a fixed state:
+
+Set \`name\` and \`color\` by converting the input byte vectors to Strings using \`string::from_utf8\`.
+
+Set \`distance_traveled\` to 0.
+
+Set \`hunger\` to 0.
+
+Set \`boost\` to 0.
+
+Please remove the **TODO** comments.`,
         readonly: false,
-        codeTemplate: `module sui_mmers::swimmer_mint {
-    use sui::object::{Self, UID};
-    use sui::tx_context::{Self, TxContext};
-    use sui::transfer;
-    use std::string::{Self, String};
-
-    public struct Swimmer has key, store {
-        id: UID,
-        distance_traveled: u64,
-        name: String,
-        species: String,
-    }
-
+        codeTemplate: `
     public entry fun mint_swimmer(
+        // Since an entry function cannot receive a String directly,
+        // we take a byte vector (vector<u8>) as input and then convert it.
         name: vector<u8>,
-        species: vector<u8>,
+        color: vector<u8>,
+        speed: u64,
         ctx: &mut TxContext,
     ) {
         let swimmer = Swimmer {
             id: object::new(ctx),
-            distance_traveled: 0,
             name: string::from_utf8(name).unwrap(),
-            species: string::from_utf8(species).unwrap(),
+            color: string::from_utf8(color).unwrap(),
+            speed: speed,
+            hunger: 0,
+            boost: 0,
+            distance_traveled: 0,
         };
 
         transfer::public_transfer(swimmer, tx_context::sender(ctx));
     }
-}
 `,
-        codeSkeletone: `module sui_mmers::swimmer_mint {
-    use sui::object::{Self, UID};
-    use sui::tx_context::{Self, TxContext};
-    use sui::transfer;
-    use std::string::{Self, String};
-
-    public struct Swimmer has key, store {
-        id: UID,
-        distance_traveled: u64,
-        name: String,
-        species: String,
-    }
-
-    public entry fun mint_swimmer(
+        codeSkeletone: `public entry fun mint_swimmer(
+        // Since an entry function cannot receive a String directly,
+        // we take a byte vector (vector<u8>) as input and then convert it.
         name: vector<u8>,
-        species: vector<u8>,
+        color: vector<u8>,
+        speed: u64,
         ctx: &mut TxContext,
     ) {
-        // TODO: build a Swimmer and transfer it to the caller.
+        let swimmer = Swimmer {
+            // TODO: build a Swimmer and transfer it to the caller.
+        };
+
+        transfer::public_transfer(swimmer, tx_context::sender(ctx));
     }
-}
 `,
       },
       {
@@ -182,80 +214,97 @@ Extend the struct with \`last_update_timestamp_ms\` and implement \`update_progr
         codeTemplate: `module sui_mmers::swimmer {
     use sui::clock::{Self, Clock};
     use sui::object::{Self, UID};
-    use sui::tx_context::{Self, TxContext};
     use sui::transfer;
+    use sui::tx_context::{Self, TxContext};
     use std::string::{Self, String};
 
-    const BASE_DISTANCE_PER_HOUR: u64 = 100;
+    const MS_PER_HOUR: u64 = 3_600_000;
 
-    public struct Swimmer has key, store {
+    public struct Swimmer has key {
         id: UID,
-        distance_traveled: u64,
         name: String,
-        species: String,
+        color: String,
+        speed: u64,
+        hunger: u64,
+        boost: u64,
+        distance_traveled: u64,
         last_update_timestamp_ms: u64,
     }
 
     public entry fun mint_swimmer(
         name: vector<u8>,
-        species: vector<u8>,
+        color: vector<u8>,
+        speed: u64,
         clock: &Clock,
         ctx: &mut TxContext,
     ) {
         let swimmer = Swimmer {
             id: object::new(ctx),
-            distance_traveled: 0,
             name: string::from_utf8(name).unwrap(),
-            species: string::from_utf8(species).unwrap(),
-            last_update_timestamp_ms: clock::timestamp_ms(clock),
+            color: string::from_utf8(color).unwrap(),
+            speed: speed,
+            hunger: 0,
+            boost: 0,
+            distance_traveled: 0,
+            last_update_timestamp_ms: clock.timestamp_ms(),
         };
 
         transfer::public_transfer(swimmer, tx_context::sender(ctx));
     }
 
     public entry fun update_progress(swimmer: &mut Swimmer, clock: &Clock) {
-        let now = clock::timestamp_ms(clock);
-        let elapsed = now - swimmer.last_update_timestamp_ms;
-        let gained = (elapsed * BASE_DISTANCE_PER_HOUR) / 3_600_000;
+        let now = clock.timestamp_ms();
+        let elapsed_ms = now - swimmer.last_update_timestamp_ms;
+        let distance_gained = (elapsed_ms * swimmer.speed) / MS_PER_HOUR;
 
-        if (gained > 0) {
-            swimmer.distance_traveled = swimmer.distance_traveled + gained;
+        if (distance_gained > 0) {
+            swimmer.distance_traveled += distance_gained;
             swimmer.last_update_timestamp_ms = now;
         }
     }
-}
-`,
-        codeSkeletone: `module sui_mmers::swimmer {
+}`,
+        codeSkeletone: `
+        module sui_mmers::swimmer {
     use sui::clock::{Self, Clock};
     use sui::object::{Self, UID};
-    use sui::tx_context::{Self, TxContext};
     use sui::transfer;
+    use sui::tx_context::{Self, TxContext};
     use std::string::{Self, String};
 
-    const BASE_DISTANCE_PER_HOUR: u64 = 100;
+    const MS_PER_HOUR: u64 = 3_600_000;
 
-    public struct Swimmer has key, store {
+    public struct Swimmer has key {
         id: UID,
-        distance_traveled: u64,
         name: String,
-        species: String,
+        color: String,
+        speed: u64,
+        hunger: u64,
+        distance_traveled: u64,
         last_update_timestamp_ms: u64,
     }
 
     public entry fun mint_swimmer(
         name: vector<u8>,
-        species: vector<u8>,
+        color: vector<u8>,
+        speed: u64,
         clock: &Clock,
         ctx: &mut TxContext,
     ) {
         // TODO: initialise last_update_timestamp_ms with the current time.
+
+        transfer::public_transfer(swimmer, tx_context::sender(ctx));
     }
 
     public entry fun update_progress(swimmer: &mut Swimmer, clock: &Clock) {
-        // TODO: compute elapsed time and update distance_traveled.
+        let now = clock.timestamp_ms();
+        let elapsed_ms = now - swimmer.last_update_timestamp_ms;
+        let distance_gained = (elapsed_ms * swimmer.speed) / MS_PER_HOUR;
+
+        if (distance_gained > 0) {
+            // TODO: compute elapsed time and update distance_traveled.
+        }
     }
-}
-`,
+}`,
       },
       {
         slug: 'deploy-swimmer',
@@ -263,55 +312,67 @@ Extend the struct with \`last_update_timestamp_ms\` and implement \`update_progr
         summary: 'Publish the swimmer module and confirm mint and update flows.',
         markdown: `### Deployment mission
 
-It is time to publish your swimmer module.
+It is time to publish your swimmer module. Configure color, speed, and more!
 
-1. Ensure your Move package matches the final module below.
-2. Run \`sui client publish --skip-dependency-verification\` inside the package directory.
-3. Call \`mint_swimmer\` and \`update_progress\` from the Sui CLI or gameplay console to verify everything works on-chain.
-
-Celebrate?your swimmer is now live!`,
+Celebrate! your swimmer is now live!`,
         readonly: false,
         codeTemplate: `module sui_mmers::swimmer {
     use sui::clock::{Self, Clock};
     use sui::object::{Self, UID};
-    use sui::tx_context::{Self, TxContext};
     use sui::transfer;
+    use sui::tx_context::{Self, TxContext};
     use std::string::{Self, String};
 
-    const BASE_DISTANCE_PER_HOUR: u64 = 100;
+    const MS_PER_HOUR: u64 = 3_600_000;
 
-    public struct Swimmer has key, store {
+    public struct Swimmer has key {
         id: UID,
-        distance_traveled: u64,
         name: String,
-        species: String,
+        color: String,
+        speed: u64,
+        hunger: u64,
+        boost: u64,
+        distance_traveled: u64,
         last_update_timestamp_ms: u64,
     }
 
     public entry fun mint_swimmer(
         name: vector<u8>,
-        species: vector<u8>,
+        color: vector<u8>,
+        speed: u64,
         clock: &Clock,
         ctx: &mut TxContext,
     ) {
         let swimmer = Swimmer {
             id: object::new(ctx),
-            distance_traveled: 0,
             name: string::from_utf8(name).unwrap(),
-            species: string::from_utf8(species).unwrap(),
-            last_update_timestamp_ms: clock::timestamp_ms(clock),
+            color: string::from_utf8(color).unwrap(),
+            speed: speed,
+            hunger: 0,
+            boost: 0,
+            distance_traveled: 0,
+            last_update_timestamp_ms: clock.timestamp_ms(),
         };
 
         transfer::public_transfer(swimmer, tx_context::sender(ctx));
     }
 
     public entry fun update_progress(swimmer: &mut Swimmer, clock: &Clock) {
-        let now = clock::timestamp_ms(clock);
-        let elapsed = now - swimmer.last_update_timestamp_ms;
-        let gained = (elapsed * BASE_DISTANCE_PER_HOUR) / 3_600_000;
+        let now = clock.timestamp_ms();
+        let elapsed_ms = now - swimmer.last_update_timestamp_ms;
+        let speed = swimmer.speed + swimmer.boost * swimmer.hurger;
+        let distance_gained = (elapsed_ms * swimmer.speed) / MS_PER_HOUR;
 
-        if (gained > 0) {
-            swimmer.distance_traveled = swimmer.distance_traveled + gained;
+        if (swimmer.hunger > elapsed_ms * swimmer.speed) {
+            swimmer.hunger -= elapsed_ms * swimmer.speed / MS_PER_HOUR;
+        } 
+        else {
+            swimmer.hunger = 0;
+            swimmer.boost = 0;
+        } 
+
+        if (distance_gained > 0) {
+            swimmer.distance_traveled += distance_gained;
             swimmer.last_update_timestamp_ms = now;
         }
     }
@@ -320,31 +381,62 @@ Celebrate?your swimmer is now live!`,
         codeSkeletone: `module sui_mmers::swimmer {
     use sui::clock::{Self, Clock};
     use sui::object::{Self, UID};
-    use sui::tx_context::{Self, TxContext};
     use sui::transfer;
+    use sui::tx_context::{Self, TxContext};
     use std::string::{Self, String};
 
-    const BASE_DISTANCE_PER_HOUR: u64 = 100;
+    const MS_PER_HOUR: u64 = 3_600_000;
 
-    public struct Swimmer has key, store {
+    public struct Swimmer has key {
         id: UID,
-        distance_traveled: u64,
         name: String,
-        species: String,
+        color: String,
+        speed: u64,
+        hunger: u64,
+        boost: u64,
+        distance_traveled: u64,
         last_update_timestamp_ms: u64,
     }
 
     public entry fun mint_swimmer(
         name: vector<u8>,
-        species: vector<u8>,
+        color: vector<u8>,
+        speed: u64,
         clock: &Clock,
         ctx: &mut TxContext,
     ) {
-        // TODO: ensure this matches the module you publish.
+        let swimmer = Swimmer {
+            id: object::new(ctx),
+            name: string::from_utf8(name).unwrap(),
+            color: string::from_utf8(color).unwrap(),
+            speed: speed,
+            hunger: 0,
+            boost: 0,
+            distance_traveled: 0,
+            last_update_timestamp_ms: clock.timestamp_ms(),
+        };
+
+        transfer::public_transfer(swimmer, tx_context::sender(ctx));
     }
 
     public entry fun update_progress(swimmer: &mut Swimmer, clock: &Clock) {
-        // TODO: ensure this matches the module you publish.
+        let now = clock.timestamp_ms();
+        let elapsed_ms = now - swimmer.last_update_timestamp_ms;
+        let speed = swimmer.speed + swimmer.boost * swimmer.hurger;
+        let distance_gained = (elapsed_ms * swimmer.speed) / MS_PER_HOUR;
+
+        if (swimmer.hunger > elapsed_ms * swimmer.speed) {
+            swimmer.hunger -= elapsed_ms * swimmer.speed / MS_PER_HOUR;
+        } 
+        else {
+            swimmer.hunger = 0;
+            swimmer.boost = 0;
+        } 
+
+        if (distance_gained > 0) {
+            swimmer.distance_traveled += distance_gained;
+            swimmer.last_update_timestamp_ms = now;
+        }
     }
 }
 `,
@@ -367,20 +459,45 @@ Celebrate?your swimmer is now live!`,
 
 **Practice**
 
-In the same file, try adding a \`TunaCan\` struct and a \`mint_tuna\` function to issue tuna cans. It will be very similar to \`mint_swimmer\`!`,
+In the same file, try adding a \`TunaCan\` struct and a \`mint_tuna\` function to issue tuna cans. It will be very similar to \`mint_swimmer\`!
+
+Each field in the struct must be set as follows:
+
+- id: Generate a new unique ID for the object by calling object::new(ctx).
+
+- boost: Set this to the incoming boost parameter
+
+- size: Set this to the incoming size parameter
+
+- color: Convert the incoming color parameter (which is a vector<u8>) into a String by using string::from_utf8(color).unwrap().
+`,
+
         readonly: false,
         codeTemplate: `module sui_mmers::tuna_items {
     use sui::object::{Self, UID};
     use sui::tx_context::{Self, TxContext};
     use sui::transfer;
+    use std::string::{Self, String};
 
     public struct TunaCan has key, store {
         id: UID,
-        energy: u64,
+        boost: u64,
+        size: u64,
+        color: String,
     }
 
-    public entry fun mint_tuna(ctx: &mut TxContext) {
-        let tuna = TunaCan { id: object::new(ctx), energy: 10 };
+    public entry fun mint_tuna(
+        boost: u64,
+        size: u64,
+        color: vector<u8>,
+        ctx: &mut TxContext
+    ) {
+        let tuna = TunaCan {
+            id: object::new(ctx),
+            boost: boost,
+            size: size,
+            color: string::from_utf8(color).unwrap(),
+        };
         transfer::public_transfer(tuna, tx_context::sender(ctx));
     }
 }
@@ -389,13 +506,21 @@ In the same file, try adding a \`TunaCan\` struct and a \`mint_tuna\` function t
     use sui::object::{Self, UID};
     use sui::tx_context::{Self, TxContext};
     use sui::transfer;
+    use std::string::{Self, String};
 
     public struct TunaCan has key, store {
         id: UID,
-        energy: u64,
+        boost: u64,
+        size: u64,
+        color: String,
     }
 
-    public entry fun mint_tuna(ctx: &mut TxContext) {
+    public entry fun mint_tuna(
+        boost: u64,
+        size: u64,
+        color: vector<u8>,
+        ctx: &mut TxContext
+    ) {
         // TODO: create a TunaCan and transfer it to the caller.
     }
 }
@@ -424,48 +549,74 @@ A PTB is a technology that bundles multiple actions like these into a single tra
 
 **Practice**
 
-Create an \`eat_tuna\` function. This function will take two objects as arguments: a \`Swimmer\` and a \`TunaCan\`. It should increase the \`Swimmer's distance_traveled\` by 10 and completely delete the \`TunaCan\` using \`object::delete\`. Remember to use \`&mut Swimmer\` (a mutable reference) to modify the Swimmer's values, and to take the entire \`TunaCan\` object by value to consume and destroy it!
+Create an \`eat_tuna\` function. \`eat_tuna\` function adds the \`boost\` value from the tuna can directly to the swimmer's \`distance_traveled\`. However, since the \`Swimmer\` struct also has \`boost\` and \`hunger\` fields, it's more logical for the act of 'eating' to affect these stats.
+
+- \`hunger Field Update\`: The most direct result of 'eating' is satisfying hunger. swimmer.hunger is calculated by size * 10.
+
+- \`boost Field Update\`: Instead of adding the tuna can's boost value directly to distance_traveled, it is now added to the swimmer's own boost stat. This allows the boost to be used as a temporary effect or a cumulative power-up.
 
 `,
         readonly: false,
         codeTemplate: `module sui_mmers::tuna_buffet {
     use sui::object::{Self, UID};
+    use sui::transfer;
+    use sui::tx_context::{Self, TxContext};
+    use std::string::{Self, String};
 
-    public struct Swimmer has key, store {
+    public struct Swimmer has key {
         id: UID,
+        name: String,
+        color: String,
+        speed: u64,
+        hunger: u64,
+        boost: u64,
         distance_traveled: u64,
+        last_update_timestamp_ms: u64,
     }
 
     public struct TunaCan has key, store {
         id: UID,
-        energy: u64,
+        boost: u64,
+        size: u64,
+        color: String,
     }
 
     public entry fun eat_tuna(swimmer: &mut Swimmer, tuna: TunaCan) {
-        let TunaCan { id, energy } = tuna;
-        swimmer.distance_traveled = swimmer.distance_traveled + energy;
+        let TunaCan { id, boost } = tuna;
+        swimmer.boost = swimmer.boost + boost;
+        swimmer.hunger = swimmer.hunger + (size * 10);
         object::delete(id);
     }
 }
 `,
         codeSkeletone: `module sui_mmers::tuna_buffet {
     use sui::object::{Self, UID};
+    use sui::transfer;
+    use sui::tx_context::{Self, TxContext};
+    use std::string::{Self, String};
 
-    public struct Swimmer has key, store {
+    public struct Swimmer has key {
         id: UID,
+        name: String,
+        color: String,
+        speed: u64,
+        hunger: u64,
+        boost: u64,
         distance_traveled: u64,
+        last_update_timestamp_ms: u64,
     }
 
     public struct TunaCan has key, store {
         id: UID,
-        energy: u64,
+        boost: u64,
+        size: u64,
+        color: String,
     }
 
     public entry fun eat_tuna(swimmer: &mut Swimmer, tuna: TunaCan) {
-        // TODO: add energy to the swimmer and delete the tuna object.
+        // TODO: add boost to the swimmer and delete the tuna object.
     }
-}
-`,
+}`,
       },
       {
         slug: 'deploy-tuna',
@@ -484,53 +635,44 @@ Your swimmers need fuel. Package the TunaCan logic and push it on-chain.
     use sui::tx_context::{Self, TxContext};
     use sui::transfer;
 
-    const ENERGY_PER_CAN: u64 = 10;
-
-    public struct Swimmer has key, store {
+    public struct Swimmer has key {
         id: UID,
+        name: String,
+        color: String,
+        speed: u64,
+        hunger: u64,
+        boost: u64,
         distance_traveled: u64,
+        last_update_timestamp_ms: u64,
     }
 
     public struct TunaCan has key, store {
         id: UID,
-        energy: u64,
+        boost: u64,
+        size: u64,
+        color: String,
     }
 
-    public entry fun mint_tuna(ctx: &mut TxContext) {
-        let tuna = TunaCan { id: object::new(ctx), energy: ENERGY_PER_CAN };
+    public entry fun mint_tuna(
+        boost: u64,
+        size: u64,
+        color: vector<u8>,
+        ctx: &mut TxContext
+    ) {
+        let tuna = TunaCan {
+            id: object::new(ctx),
+            boost: boost,
+            size: size,
+            color: string::from_utf8(color).unwrap(),
+        };
         transfer::public_transfer(tuna, tx_context::sender(ctx));
     }
 
     public entry fun eat_tuna(swimmer: &mut Swimmer, tuna: TunaCan) {
-        let TunaCan { id, energy } = tuna;
-        swimmer.distance_traveled = swimmer.distance_traveled + energy;
+        let TunaCan { id, boost } = tuna;
+        swimmer.boost = swimmer.boost + boost;
+        swimmer.hunger = swimmer.hunger + (size * 10);
         object::delete(id);
-    }
-}
-`,
-        codeSkeletone: `module sui_mmers::tuna_service {
-    use sui::object::{Self, UID};
-    use sui::tx_context::{Self, TxContext};
-    use sui::transfer;
-
-    const ENERGY_PER_CAN: u64 = 10;
-
-    public struct Swimmer has key, store {
-        id: UID,
-        distance_traveled: u64,
-    }
-
-    public struct TunaCan has key, store {
-        id: UID,
-        energy: u64,
-    }
-
-    public entry fun mint_tuna(ctx: &mut TxContext) {
-        // TODO: mint a TunaCan with ENERGY_PER_CAN energy.
-    }
-
-    public entry fun eat_tuna(swimmer: &mut Swimmer, tuna: TunaCan) {
-        // TODO: consume the tuna and boost the swimmer.
     }
 }
 `,
@@ -546,9 +688,27 @@ Your swimmers need fuel. Package the TunaCan logic and push it on-chain.
         slug: 'shared-registry',
         title: 'Chapter 1 - Swimming Together',
         summary: 'Share a SwimmerRegistry that maps swimmer IDs to owners.',
-        markdown: `Owned objects live on private islands; no one else can see them. To help everyone discover new swimmers we create a shared object called \`SwimmerRegistry\`. Every time a swimmer is minted we record its ID and owner on the registry.
+        markdown: `
+### Chapter 1: Swimming Together!
 
-**Practice:** Define a \`SwimmerRegistry\` shared object and update \`mint_swimmer\` so that each new swimmer registers itself before ownership transfers.`,
+**Explanation**
+
+So far, your swimmer has been swimming the lonely sea all by itself. Where are all the other cool swimmers? Don't you want to see them?
+
+**Challenge**: The Invisible Neighbors!
+
+In Sui, every object we've created so far is an **'Owned Object'**. As the name implies, it is owned exclusively by you and exists only in your wallet. Therefore, other people can't see your swimmer or even know that it exists. It's like every swimmer is living on their own private island.
+
+**Solution**: Let's Build a Notice Board in the Town Square! (Shared Object)
+To solve this problem, we will create something called a 'Shared Object'. A shared object has no specific owner. Like a notice board in the town square, everyone can see it, and anyone can post new information according to set rules.
+
+We are going to create a giant notice board (a shared object) called \`SwimmerRegistry\`. And we will change the rules so that whenever someone creates a new swimmer, their swimmer's 'nametag (ID)' is registered on this board. Now, anyone can come to this board and see a list of all the swimmers that exist in our Sui-mmers world! This is the first step toward a true multiplayer world.
+
+**Practice**
+
+Create \`SwimmerRegistry\` shared object to register all swimmer information, and modify the mint_swimmer function so that new swimmers are automatically registered here when they are born.
+        
+        Owned objects live on private islands; no one else can see them. To help everyone discover new swimmers we create a shared object called \`SwimmerRegistry\`. Every time a swimmer is minted we record its ID and owner on the registry.`,
         readonly: false,
         codeTemplate: `module sui_mmers::registry {
     use sui::clock::{Self, Clock};
@@ -561,9 +721,12 @@ Your swimmers need fuel. Package the TunaCan logic and push it on-chain.
 
     public struct Swimmer has key, store {
         id: UID,
-        distance_traveled: u64,
         name: String,
-        species: String,
+        color: String,
+        speed: u64,
+        hunger: u64,
+        boost: u64,
+        distance_traveled: u64,
         last_update_timestamp_ms: u64,
     }
 
@@ -580,17 +743,21 @@ Your swimmers need fuel. Package the TunaCan logic and push it on-chain.
     public entry fun mint_swimmer(
         registry: &mut SwimmerRegistry,
         name: vector<u8>,
-        species: vector<u8>,
+        color: vector<u8>,
+        speed: u64,
         clock: &Clock,
         ctx: &mut TxContext,
     ) {
         let owner = tx_context::sender(ctx);
         let swimmer = Swimmer {
             id: object::new(ctx),
-            distance_traveled: 0,
             name: string::from_utf8(name).unwrap(),
-            species: string::from_utf8(species).unwrap(),
-            last_update_timestamp_ms: clock::timestamp_ms(clock),
+            color: string::from_utf8(color).unwrap(),
+            speed: speed,
+            hunger: 0,
+            boost: 0,
+            distance_traveled: 0,
+            last_update_timestamp_ms: clock.timestamp_ms(),
         };
 
         table::add(&mut registry.swimmers, object::id(&swimmer), owner);
@@ -609,9 +776,12 @@ Your swimmers need fuel. Package the TunaCan logic and push it on-chain.
 
     public struct Swimmer has key, store {
         id: UID,
-        distance_traveled: u64,
         name: String,
-        species: String,
+        color: String,
+        speed: u64,
+        hunger: u64,
+        boost: u64,
+        distance_traveled: u64,
         last_update_timestamp_ms: u64,
     }
 
@@ -627,7 +797,8 @@ Your swimmers need fuel. Package the TunaCan logic and push it on-chain.
     public entry fun mint_swimmer(
         registry: &mut SwimmerRegistry,
         name: vector<u8>,
-        species: vector<u8>,
+        color: vector<u8>,
+        speed: u64,
         clock: &Clock,
         ctx: &mut TxContext,
     ) {
@@ -648,21 +819,34 @@ Share the SwimmerRegistry so every new swimmer announces itself.
 2. Run \`init\` once to create and share the registry object.
 3. Mint swimmers with \`mint_swimmer\`; confirm each ID appears in the registry table.`,
         readonly: false,
-        codeTemplate: `module sui_mmers::registry {
+        codeTemplate: `module sui_mmers::game {
+
     use sui::clock::{Self, Clock};
     use sui::object::{Self, UID, ID};
     use sui::table::{Self, Table};
-    use sui::tx_context::{Self, TxContext};
     use sui::transfer;
-    use std::string::{Self, String};
+    use sui::tx_context::{Self, TxContext};
     use sui::address;
+    use std::string::{Self, String};
+
+    const MS_PER_HOUR: u64 = 3_600_000;
 
     public struct Swimmer has key, store {
         id: UID,
-        distance_traveled: u64,
         name: String,
-        species: String,
+        color: String,
+        speed: u64,
+        hunger: u64,
+        boost: u64,
+        distance_traveled: u64,
         last_update_timestamp_ms: u64,
+    }
+
+    public struct TunaCan has key, store {
+        id: UID,
+        boost: u64,
+        size: u64,
+        color: String,
     }
 
     public struct SwimmerRegistry has key {
@@ -671,28 +855,85 @@ Share the SwimmerRegistry so every new swimmer announces itself.
     }
 
     fun init(ctx: &mut TxContext) {
-        let registry = SwimmerRegistry { id: object::new(ctx), swimmers: table::new(ctx) };
+        let registry = SwimmerRegistry {
+            id: object::new(ctx),
+            swimmers: table::new(ctx),
+        };
         transfer::share_object(registry);
     }
 
     public entry fun mint_swimmer(
         registry: &mut SwimmerRegistry,
         name: vector<u8>,
-        species: vector<u8>,
+        color: vector<u8>,
+        speed: u64,
         clock: &Clock,
         ctx: &mut TxContext,
     ) {
         let owner = tx_context::sender(ctx);
         let swimmer = Swimmer {
             id: object::new(ctx),
-            distance_traveled: 0,
             name: string::from_utf8(name).unwrap(),
-            species: string::from_utf8(species).unwrap(),
-            last_update_timestamp_ms: clock::timestamp_ms(clock),
+            color: string::from_utf8(color).unwrap(),
+            speed: speed,
+            hunger: 0,
+            boost: 0,
+            distance_traveled: 0,
+            last_update_timestamp_ms: clock.timestamp_ms(),
         };
 
         table::add(&mut registry.swimmers, object::id(&swimmer), owner);
         transfer::public_transfer(swimmer, owner);
+    }
+
+    public entry fun mint_tuna(
+        boost: u64,
+        size: u64,
+        color: vector<u8>,
+        ctx: &mut TxContext
+    ) {
+        let tuna = TunaCan {
+            id: object::new(ctx),
+            boost: boost,
+            size: size,
+            color: string::from_utf8(color).unwrap(),
+        };
+        transfer::public_transfer(tuna, tx_context::sender(ctx));
+    }
+
+    public entry fun eat_tuna(swimmer: &mut Swimmer, tuna: TunaCan) {
+        let TunaCan { id, boost, size } = tuna;
+        swimmer.hunger += size;
+        swimmer.boost += boost;
+
+        object::delete(id);
+    }
+
+    public entry fun update_progress(swimmer: &mut Swimmer, clock: &Clock) {
+        let now = clock.timestamp_ms();
+        let elapsed_ms = now - swimmer.last_update_timestamp_ms;
+
+        if (elapsed_ms == 0) { return };
+
+        let effective_speed = swimmer.speed + swimmer.boost;
+        let distance_gained = (elapsed_ms * effective_speed) / MS_PER_HOUR;
+        let hunger_consumed = distance_gained;
+
+        if (swimmer.hunger > hunger_consumed) {
+            swimmer.hunger -= hunger_consumed;
+            swimmer.distance_traveled += distance_gained;
+            
+            if (swimmer.boost > distance_gained) {
+                swimmer.boost -= distance_gained;
+            } else {
+                swimmer.boost = 0;
+            }
+        } else {
+            swimmer.hunger = 0;
+            swimmer.boost = 0;
+        }
+
+        swimmer.last_update_timestamp_ms = now;
     }
 }
 `,
@@ -700,17 +941,29 @@ Share the SwimmerRegistry so every new swimmer announces itself.
     use sui::clock::{Self, Clock};
     use sui::object::{Self, UID, ID};
     use sui::table::{Self, Table};
-    use sui::tx_context::{Self, TxContext};
     use sui::transfer;
-    use std::string::{Self, String};
+    use sui::tx_context::{Self, TxContext};
     use sui::address;
+    use std::string::{Self, String};
+
+    const MS_PER_HOUR: u64 = 3_600_000;
 
     public struct Swimmer has key, store {
         id: UID,
-        distance_traveled: u64,
         name: String,
-        species: String,
+        color: String,
+        speed: u64,
+        hunger: u64,
+        boost: u64,
+        distance_traveled: u64,
         last_update_timestamp_ms: u64,
+    }
+
+    public struct TunaCan has key, store {
+        id: UID,
+        boost: u64,
+        size: u64,
+        color: String,
     }
 
     public struct SwimmerRegistry has key {
@@ -719,28 +972,85 @@ Share the SwimmerRegistry so every new swimmer announces itself.
     }
 
     fun init(ctx: &mut TxContext) {
-        let registry = SwimmerRegistry { id: object::new(ctx), swimmers: table::new(ctx) };
+        let registry = SwimmerRegistry {
+            id: object::new(ctx),
+            swimmers: table::new(ctx),
+        };
         transfer::share_object(registry);
     }
 
     public entry fun mint_swimmer(
         registry: &mut SwimmerRegistry,
         name: vector<u8>,
-        species: vector<u8>,
+        color: vector<u8>,
+        speed: u64,
         clock: &Clock,
         ctx: &mut TxContext,
     ) {
         let owner = tx_context::sender(ctx);
         let swimmer = Swimmer {
             id: object::new(ctx),
-            distance_traveled: 0,
             name: string::from_utf8(name).unwrap(),
-            species: string::from_utf8(species).unwrap(),
-            last_update_timestamp_ms: clock::timestamp_ms(clock),
+            color: string::from_utf8(color).unwrap(),
+            speed: speed,
+            hunger: 0,
+            boost: 0,
+            distance_traveled: 0,
+            last_update_timestamp_ms: clock.timestamp_ms(),
         };
 
         table::add(&mut registry.swimmers, object::id(&swimmer), owner);
         transfer::public_transfer(swimmer, owner);
+    }
+
+    public entry fun mint_tuna(
+        boost: u64,
+        size: u64,
+        color: vector<u8>,
+        ctx: &mut TxContext
+    ) {
+        let tuna = TunaCan {
+            id: object::new(ctx),
+            boost: boost,
+            size: size,
+            color: string::from_utf8(color).unwrap(),
+        };
+        transfer::public_transfer(tuna, tx_context::sender(ctx));
+    }
+
+    public entry fun eat_tuna(swimmer: &mut Swimmer, tuna: TunaCan) {
+        let TunaCan { id, boost, size } = tuna;
+        swimmer.hunger += size;
+        swimmer.boost += boost;
+
+        object::delete(id);
+    }
+
+    public entry fun update_progress(swimmer: &mut Swimmer, clock: &Clock) {
+        let now = clock.timestamp_ms();
+        let elapsed_ms = now - swimmer.last_update_timestamp_ms;
+
+        if (elapsed_ms == 0) { return };
+
+        let effective_speed = swimmer.speed + swimmer.boost;
+        let distance_gained = (elapsed_ms * effective_speed) / MS_PER_HOUR;
+        let hunger_consumed = distance_gained;
+
+        if (swimmer.hunger > hunger_consumed) {
+            swimmer.hunger -= hunger_consumed;
+            swimmer.distance_traveled += distance_gained;
+            
+            if (swimmer.boost > distance_gained) {
+                swimmer.boost -= distance_gained;
+            } else {
+                swimmer.boost = 0;
+            }
+        } else {
+            swimmer.hunger = 0;
+            swimmer.boost = 0;
+        }
+
+        swimmer.last_update_timestamp_ms = now;
     }
 }
 `,

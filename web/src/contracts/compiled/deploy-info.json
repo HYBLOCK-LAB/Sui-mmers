@@ -1,0 +1,8 @@
+{
+  "compiledAt": "2025-09-20T16:20:52.031Z",
+  "modules": [
+    "swimmer"
+  ],
+  "network": "testnet",
+  "suiVersion": "sui 1.56.3-4b16586bb037"
+}
