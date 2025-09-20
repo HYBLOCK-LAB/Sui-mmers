@@ -4,20 +4,21 @@ import { LessonPageClient } from '@/components/lessons/LessonPageClient';
 import { LESSONS, getChapter, getNextChapter, getPreviousChapter } from '@/lib/lessons';
 
 interface LessonChapterPageProps {
-  params: { lessonSlug: string; chapterSlug: string };
+  params: Promise<{ lessonSlug: string; chapterSlug: string }>;
 }
 
-export default function LessonChapterPage({ params }: LessonChapterPageProps) {
-  const { lessonSlug, chapterSlug } = params;
+export default async function LessonChapterPage({ params }: LessonChapterPageProps) {
+  const { lessonSlug, chapterSlug } = await params;
   const chapterInfo = getChapter(lessonSlug, chapterSlug);
 
   if (!chapterInfo) {
     notFound();
   }
 
-  const { lesson, chapter } = chapterInfo;
+  const { lesson, chapter, chapterIndex } = chapterInfo;
   const nextChapter = getNextChapter(lessonSlug, chapterSlug);
   const previousChapter = getPreviousChapter(lessonSlug, chapterSlug);
+  const isFinalChapter = chapterIndex === lesson.chapters.length - 1;
 
   return (
     <LearningLayout>
@@ -31,6 +32,7 @@ export default function LessonChapterPage({ params }: LessonChapterPageProps) {
         codeTemplate={chapter.codeTemplate}
         codeSkeletone={chapter.codeSkeletone}
         readOnly={chapter.readonly}
+        isFinalChapter={isFinalChapter}
         nextLessonSlug={nextChapter?.lesson.slug}
         nextChapterSlug={nextChapter?.chapter.slug}
         nextChapterTitle={nextChapter?.chapter.title}
