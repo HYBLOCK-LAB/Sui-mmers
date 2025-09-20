@@ -646,9 +646,12 @@ Create \`SwimmerRegistry\` shared object to register all swimmer information, an
 
     public struct Swimmer has key, store {
         id: UID,
-        distance_traveled: u64,
         name: String,
-        species: String,
+        color: String,
+        speed: u64,
+        hunger: u64,
+        boost: u64,
+        distance_traveled: u64,
         last_update_timestamp_ms: u64,
     }
 
@@ -665,17 +668,21 @@ Create \`SwimmerRegistry\` shared object to register all swimmer information, an
     public entry fun mint_swimmer(
         registry: &mut SwimmerRegistry,
         name: vector<u8>,
-        species: vector<u8>,
+        color: vector<u8>,
+        speed: u64,
         clock: &Clock,
         ctx: &mut TxContext,
     ) {
         let owner = tx_context::sender(ctx);
         let swimmer = Swimmer {
             id: object::new(ctx),
-            distance_traveled: 0,
             name: string::from_utf8(name).unwrap(),
-            species: string::from_utf8(species).unwrap(),
-            last_update_timestamp_ms: clock::timestamp_ms(clock),
+            color: string::from_utf8(color).unwrap(),
+            speed: speed,
+            hunger: 0,
+            boost: 0,
+            distance_traveled: 0,
+            last_update_timestamp_ms: clock.timestamp_ms(),
         };
 
         table::add(&mut registry.swimmers, object::id(&swimmer), owner);
@@ -694,9 +701,12 @@ Create \`SwimmerRegistry\` shared object to register all swimmer information, an
 
     public struct Swimmer has key, store {
         id: UID,
-        distance_traveled: u64,
         name: String,
-        species: String,
+        color: String,
+        speed: u64,
+        hunger: u64,
+        boost: u64,
+        distance_traveled: u64,
         last_update_timestamp_ms: u64,
     }
 
@@ -712,7 +722,8 @@ Create \`SwimmerRegistry\` shared object to register all swimmer information, an
     public entry fun mint_swimmer(
         registry: &mut SwimmerRegistry,
         name: vector<u8>,
-        species: vector<u8>,
+        color: vector<u8>,
+        speed: u64,
         clock: &Clock,
         ctx: &mut TxContext,
     ) {
@@ -733,21 +744,34 @@ Share the SwimmerRegistry so every new swimmer announces itself.
 2. Run \`init\` once to create and share the registry object.
 3. Mint swimmers with \`mint_swimmer\`; confirm each ID appears in the registry table.`,
         readonly: false,
-        codeTemplate: `module sui_mmers::registry {
+        codeTemplate: `module sui_mmers::game {
+
     use sui::clock::{Self, Clock};
     use sui::object::{Self, UID, ID};
     use sui::table::{Self, Table};
-    use sui::tx_context::{Self, TxContext};
     use sui::transfer;
-    use std::string::{Self, String};
+    use sui::tx_context::{Self, TxContext};
     use sui::address;
+    use std::string::{Self, String};
+
+    const MS_PER_HOUR: u64 = 3_600_000;
 
     public struct Swimmer has key, store {
         id: UID,
-        distance_traveled: u64,
         name: String,
-        species: String,
+        color: String,
+        speed: u64,
+        hunger: u64,
+        boost: u64,
+        distance_traveled: u64,
         last_update_timestamp_ms: u64,
+    }
+
+    public struct TunaCan has key, store {
+        id: UID,
+        boost: u64,
+        size: u64,
+        color: String,
     }
 
     public struct SwimmerRegistry has key {
@@ -756,76 +780,85 @@ Share the SwimmerRegistry so every new swimmer announces itself.
     }
 
     fun init(ctx: &mut TxContext) {
-        let registry = SwimmerRegistry { id: object::new(ctx), swimmers: table::new(ctx) };
+        let registry = SwimmerRegistry {
+            id: object::new(ctx),
+            swimmers: table::new(ctx),
+        };
         transfer::share_object(registry);
     }
 
     public entry fun mint_swimmer(
         registry: &mut SwimmerRegistry,
         name: vector<u8>,
-        species: vector<u8>,
+        color: vector<u8>,
+        speed: u64,
         clock: &Clock,
         ctx: &mut TxContext,
     ) {
         let owner = tx_context::sender(ctx);
         let swimmer = Swimmer {
             id: object::new(ctx),
-            distance_traveled: 0,
             name: string::from_utf8(name).unwrap(),
-            species: string::from_utf8(species).unwrap(),
-            last_update_timestamp_ms: clock::timestamp_ms(clock),
+            color: string::from_utf8(color).unwrap(),
+            speed: speed,
+            hunger: 0,
+            boost: 0,
+            distance_traveled: 0,
+            last_update_timestamp_ms: clock.timestamp_ms(),
         };
 
         table::add(&mut registry.swimmers, object::id(&swimmer), owner);
         transfer::public_transfer(swimmer, owner);
     }
-}
-`,
-        codeSkeletone: `module sui_mmers::registry {
-    use sui::clock::{Self, Clock};
-    use sui::object::{Self, UID, ID};
-    use sui::table::{Self, Table};
-    use sui::tx_context::{Self, TxContext};
-    use sui::transfer;
-    use std::string::{Self, String};
-    use sui::address;
 
-    public struct Swimmer has key, store {
-        id: UID,
-        distance_traveled: u64,
-        name: String,
-        species: String,
-        last_update_timestamp_ms: u64,
-    }
-
-    public struct SwimmerRegistry has key {
-        id: UID,
-        swimmers: Table<ID, address>,
-    }
-
-    fun init(ctx: &mut TxContext) {
-        let registry = SwimmerRegistry { id: object::new(ctx), swimmers: table::new(ctx) };
-        transfer::share_object(registry);
-    }
-
-    public entry fun mint_swimmer(
-        registry: &mut SwimmerRegistry,
-        name: vector<u8>,
-        species: vector<u8>,
-        clock: &Clock,
-        ctx: &mut TxContext,
+    public entry fun mint_tuna(
+        boost: u64,
+        size: u64,
+        color: vector<u8>,
+        ctx: &mut TxContext
     ) {
-        let owner = tx_context::sender(ctx);
-        let swimmer = Swimmer {
+        let tuna = TunaCan {
             id: object::new(ctx),
-            distance_traveled: 0,
-            name: string::from_utf8(name).unwrap(),
-            species: string::from_utf8(species).unwrap(),
-            last_update_timestamp_ms: clock::timestamp_ms(clock),
+            boost: boost,
+            size: size,
+            color: string::from_utf8(color).unwrap(),
         };
+        transfer::public_transfer(tuna, tx_context::sender(ctx));
+    }
 
-        table::add(&mut registry.swimmers, object::id(&swimmer), owner);
-        transfer::public_transfer(swimmer, owner);
+    public entry fun eat_tuna(swimmer: &mut Swimmer, tuna: TunaCan) {
+        let TunaCan { id, boost, size } = tuna;
+        swimmer.hunger += size;
+        swimmer.boost += boost;
+
+        object::delete(id);
+    }
+
+    public entry fun update_progress(swimmer: &mut Swimmer, clock: &Clock) {
+        let now = clock.timestamp_ms();
+        let elapsed_ms = now - swimmer.last_update_timestamp_ms;
+
+        if (elapsed_ms == 0) { return };
+
+        let effective_speed = swimmer.speed + swimmer.boost;
+        let distance_gained = (elapsed_ms * effective_speed) / MS_PER_HOUR;
+        let hunger_consumed = distance_gained;
+
+        if (swimmer.hunger > hunger_consumed) {
+            swimmer.hunger -= hunger_consumed;
+            swimmer.distance_traveled += distance_gained;
+            
+            if (swimmer.boost > distance_gained) {
+                swimmer.boost -= distance_gained;
+            } else {
+                swimmer.boost = 0;
+            }
+        } else {
+            swimmer.hunger = 0;
+            swimmer.boost = 0;
+        }
+
+        swimmer.last_update_timestamp_ms = now;
     }
 }
 `,
