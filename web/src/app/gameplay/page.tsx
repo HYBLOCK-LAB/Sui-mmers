@@ -32,9 +32,12 @@ function GameplayContent() {
     chains: ['sui:testnet'],
   };
 
-  // 실제 지갑 또는 Mock 지갑 선택
-  const currentAccount = isMockMode ? mockCurrentAccount : useCurrentAccount();
+  // 항상 모든 Hook을 호출 (React Hook 규칙)
+  const realAccount = useCurrentAccount();
   const { mutate: signAndExecute } = useSignAndExecuteTransaction();
+  
+  // 실제 지갑 또는 Mock 지갑 선택
+  const currentAccount = isMockMode ? mockCurrentAccount : realAccount;
   const [suiService] = useState(() => new SuiService('testnet'));
 
   const [swimmers, setSwimmers] = useState<SwimmerSummary[]>([]);

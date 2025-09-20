@@ -55,16 +55,11 @@ export class ApiMoveCompiler {
     const bytecodeBytes = fromBase64(bytecode)
     
     // 패키지 배포
-    const result = tx.publish({
+    // Sui SDK v1+에서는 publish가 자동으로 UpgradeCap을 sender에게 전송
+    tx.publish({
       modules: [bytecodeBytes],
       dependencies: dependencies,
     })
-    
-    // UpgradeCap 전송
-    if (result) {
-      const upgradeCap = Array.isArray(result) ? result[0] : result
-      tx.transferObjects([upgradeCap], tx.gas)
-    }
     
     return tx
   }
