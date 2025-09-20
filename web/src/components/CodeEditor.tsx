@@ -268,12 +268,14 @@ export function CodeEditor({ onMint, disabled, codeTemplate, codeSkeletone, read
     setIsDiffReady(false);
   };
 
+  const editorHeightClass = showHint || showSolution ? 'min-h-[440px]' : 'min-h-[320px]';
+
   return (
     <Card className="flex h-full flex-1 flex-col">
       <CardHeader>
         <CardTitle>Code Editer</CardTitle>
       </CardHeader>
-      <CardContent className="flex-1">
+      <CardContent className={`flex-1 ${editorHeightClass}`}>
         {hasChecker ? (
           showSolution ? (
             <DiffEditor
