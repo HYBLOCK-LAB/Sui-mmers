@@ -44,6 +44,65 @@ const normalize = (input: string): string =>
     .join('\n')
     .trim();
 
+type DiffOp = {
+  type: 'equal' | 'add' | 'remove';
+  line: string;
+};
+
+const computeDiffOps = (current: string, solution: string): DiffOp[] => {
+  const currentLines = current.replace(/\r\n/g, '\n').split('\n');
+  const solutionLines = solution.replace(/\r\n/g, '\n').split('\n');
+  const m = currentLines.length;
+  const n = solutionLines.length;
+  const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+
+  for (let i = m - 1; i >= 0; i -= 1) {
+    for (let j = n - 1; j >= 0; j -= 1) {
+      if (currentLines[i] === solutionLines[j]) {
+        dp[i][j] = dp[i + 1][j + 1] + 1;
+      } else {
+        dp[i][j] = Math.max(dp[i + 1][j], dp[i][j + 1]);
+      }
+    }
+  }
+
+  const ops: DiffOp[] = [];
+  let i = 0;
+  let j = 0;
+
+  while (i < m && j < n) {
+    if (currentLines[i] === solutionLines[j]) {
+      ops.push({ type: 'equal', line: solutionLines[j] });
+      i += 1;
+      j += 1;
+    } else if (dp[i + 1][j] >= dp[i][j + 1]) {
+      ops.push({ type: 'remove', line: currentLines[i] });
+      i += 1;
+    } else {
+      ops.push({ type: 'add', line: solutionLines[j] });
+      j += 1;
+    }
+  }
+
+  while (i < m) {
+    ops.push({ type: 'remove', line: currentLines[i] });
+    i += 1;
+  }
+
+  while (j < n) {
+    ops.push({ type: 'add', line: solutionLines[j] });
+    j += 1;
+  }
+
+  return ops;
+};
+
+const createHintPlaceholder = (line: string): string => {
+  const indentMatch = line.match(/^(\s*)/);
+  const indent = indentMatch ? indentMatch[1] : '';
+  return indent + ' ';
+};
+
 export function CodeEditor({ onMint, disabled, codeTemplate, codeSkeletone, readOnly = false }: CodeEditorProps) {
   const [isDeploying, setIsDeploying] = useState(false);
   const [name] = useState('My Swimmer');
@@ -73,6 +132,25 @@ export function CodeEditor({ onMint, disabled, codeTemplate, codeSkeletone, read
   const [showHint, setShowHint] = useState(false);
   const [isEditorReady, setIsEditorReady] = useState(!hasChecker);
   const [isDiffReady, setIsDiffReady] = useState(false);
+
+  const hintMaskedSolution = useMemo(() => {
+    if (!showHint) {
+      return solutionCode;
+    }
+
+    const ops = computeDiffOps(code, solutionCode);
+    const maskedLines: string[] = [];
+
+    ops.forEach((op) => {
+      if (op.type === 'add') {
+        maskedLines.push(createHintPlaceholder(op.line));
+      } else if (op.type === 'equal') {
+        maskedLines.push(op.line);
+      }
+    });
+
+    return maskedLines.join('\n');
+  }, [showHint, code, solutionCode]);
 
   useEffect(() => {
     if (hasChecker) {
@@ -193,7 +271,7 @@ export function CodeEditor({ onMint, disabled, codeTemplate, codeSkeletone, read
   return (
     <Card className="flex h-full flex-1 flex-col">
       <CardHeader>
-        <CardTitle>Code Playground</CardTitle>
+        <CardTitle>Code Editer</CardTitle>
       </CardHeader>
       <CardContent className="min-h-[320px] flex-1">
         {hasChecker ? (
@@ -216,7 +294,7 @@ export function CodeEditor({ onMint, disabled, codeTemplate, codeSkeletone, read
           ) : showHint ? (
             <DiffEditor
               original={code}
-              modified={solutionCode}
+              modified={hintMaskedSolution}
               language="rust"
               beforeMount={() => setIsEditorReady(false)}
               onMount={handleHintDiffEditorMount}
@@ -295,7 +373,7 @@ export function CodeEditor({ onMint, disabled, codeTemplate, codeSkeletone, read
               </>
             )}
             {showSolution && (
-              <Button variant="outline" onClick={() => setShowSolution(false)} disabled={!isDiffReady}>
+              <Button variant="outline" onClick={() => setShowSolution(false)}>
                 Back to editor
               </Button>
             )}

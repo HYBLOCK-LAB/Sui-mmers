@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import '@/styles/globals.css';
 import '@mysten/dapp-kit/dist/index.css';
 import Link from 'next/link';
 import { WalletConnect } from '@/components/WalletConnect';
 import { Providers } from '@/app/providers';
+import { Button } from '@/components/ui/button';
 
 export const metadata: Metadata = {
   title: 'Sui-mmers',
@@ -23,7 +24,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               </div>
               <span className="text-sm font-semibold uppercase tracking-[0.4em] text-blue-600">Sui-mmers</span>
             </Link>
-
+            <div className="flex items-center gap-4">
+              <Button asChild className="bg-gray-200 hover:bg-gray-300 text-gray-800">
+                <Link href="/lessons">Lessons</Link>
+              </Button>
+              <Button asChild className="bg-green-600 hover:bg-green-700 text-white">
+                <Link href="/gameplay">Playground</Link>
+              </Button>
+            </div>
             <WalletConnect />
           </header>
           {children}

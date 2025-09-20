@@ -87,7 +87,7 @@ export function LessonPageClient({
     `flex-1 rounded-md border px-3 py-2 text-sm font-medium transition ${
       workspaceTab === tab
         ? 'border-emerald-200 bg-emerald-50 text-emerald-600 shadow-sm'
-        : 'border-transparent text-gray-500 hover:bg-gray-100 hover:text-gray-700'
+        : 'border-transparent text-gray-500 bg-gray-100 hover:bg-gray-200 hover:text-gray-700'
     }`;
 
   return (
@@ -110,18 +110,10 @@ export function LessonPageClient({
             />
             <div className="space-y-4 self-start">
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  className={tabClassName('code')}
-                  onClick={() => setWorkspaceTab('code')}
-                >
+                <button type="button" className={tabClassName('code')} onClick={() => setWorkspaceTab('code')}>
                   Code Playground
                 </button>
-                <button
-                  type="button"
-                  className={tabClassName('preview')}
-                  onClick={() => setWorkspaceTab('preview')}
-                >
+                <button type="button" className={tabClassName('preview')} onClick={() => setWorkspaceTab('preview')}>
                   Deployment Preview
                 </button>
               </div>
@@ -135,7 +127,11 @@ export function LessonPageClient({
         ) : (
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] items-start">
             <LessonDescription markdown={markdown} className="h-full" />
-            <CodeEditor codeTemplate={codeTemplate} codeSkeletone={effectiveCodeSkeletone} readOnly={effectiveReadOnly} />
+            <CodeEditor
+              codeTemplate={codeTemplate}
+              codeSkeletone={effectiveCodeSkeletone}
+              readOnly={effectiveReadOnly}
+            />
           </div>
         )
       ) : (
@@ -150,9 +146,6 @@ export function LessonPageClient({
         ) : (
           <div />
         )}
-        <Button asChild variant="secondary">
-          <Link href="/gameplay">Head to the gameplay console</Link>
-        </Button>
         {nextHref ? (
           <Button asChild>
             <Link href={nextHref}>Next: {nextChapterTitle ?? 'Continue'} </Link>
