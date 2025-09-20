@@ -1,39 +1,59 @@
-﻿import { LessonDefinition } from './types'
+import { LessonDefinition } from './types';
 
 export const lessonsData: LessonDefinition[] = [
   {
     slug: 'prologue',
-    title: 'Lesson 0 · Prologue',
+    title: 'Lesson 0 - Prologue',
     summary: 'Warm up, install your gear, and learn what Move brings to the table before diving in.',
     chapters: [
       {
         slug: 'welcome-to-the-ocean',
         title: 'Welcome to Sui-mmers',
         summary: 'Install the toolkit, claim testnet coins, and understand why we build with Move.',
-        markdown: `### Welcome aboard!
+        markdown: `### Welcome to Sui-mmers!
 
-Before we swim across the Pacific we need our gear. Install the Sui wallet, grab the CLI, and request a faucet allocation so your experiments never cost real SUI.
+In this game, you'll become the trainer of a great (perhaps slightly goofy) swimmer crossing the Pacific Ocean.
 
-### Why Move matters
+        **Explanation**
 
-Move was born to keep digital assets safe. Ownership is a first-class concept which means your Swimmer NFT can never be duplicated or lost by mistake. Throughout this course we will rely on Move to build an ever-expanding ocean adventure.
+Hello, future conqueror of the seas! Before we swim across the Pacific, we need our gear, right? Our gear is the Sui Wallet and the Sui CLI for development. The wallet is a digital pouch that holds your swimmer NFTs and items, and the CLI is a magical controller that lets you talk to the blockchain. Let’s install them together and get some test “fake” Sui coins so you can practice freely. It’s not real money, so feel free to spend it as you learn!
 
-When you are ready, tighten that swim cap and jump in.`,
+**The Laws of the Sea: The Move Language**
+
+All the rules for creating swimmers, crafting items, and feeding them are written in a special language called Move. Move was born at Facebook (Meta) to safely handle digital assets. The concept of “ownership” is built right into the language, which fundamentally prevents your precious swimmer NFT from being accidentally duplicated or disappearing. It’s like taking a real-world law—“an object can only be owned by one person at a time”—and writing it directly into code. From here on, we’ll use this safe and powerful Move language to create our very own ocean world!
+
+We'll build the skeleton of our swimmer with Move, attach a progress system that grows by “eating time,” and embark on a quirky adventure where a tuna can gets gulped down in one bite. Ready? **Pull your swim cap tight—splash!**`,
+        readonly: false,
       },
     ],
   },
   {
     slug: 'swimmer-foundations',
-    title: 'Lesson 1 · Swimmer Foundations',
+    title: 'Lesson 1 - Swimmer Foundations',
     summary: 'Model a swimmer, mint the NFT, and keep progress up to date.',
     chapters: [
       {
         slug: 'module-and-object',
-        title: 'Chapter 1 · Structure the Swimmer',
-        summary: 'Define a Swimmer struct with a UID and distance counter.',
-        markdown: `A Swimmer is not just a document – it is an on-chain object. Every object needs a \`UID\`, a name, a species, and the distance it has travelled.
+        title: "Chapter 1 - Let's Carve the Swimmer's Skeleton",
+        summary: 'A swimmer is more than data; it is a unique object with a UID.',
+        markdown: `
+        
+### Chapter 1: Let's Carve the Swimmer's Skeleton
 
-Your task: create the \`Swimmer\` struct with the \`has key\` ability so it can live on-chain.`,
+**One-line Summary**: “A swimmer isn't just data; it's an object. Objects are born into the world with a unique UID.”
+
+**Explanation**
+
+In this lesson, you become the owner of a great (and perhaps a little silly) swimmer. This swimmer isn't just a picture; it's a living NFT (Non-Fungible Token) on the blockchain. In Sui, all NFTs are called 'Objects'. Just as every physical thing is an object in reality, every digital asset on the Sui blockchain exists as a unique object.
+
+Right now, we're going to use the Move language to create the blueprint for our swimmer object. This blueprint is called a \`struct\`. A \`struct\` is like a skeleton that defines what information our swimmer is made of, such as 'name', 'species', and 'distance traveled'.
+
+And then, we'll add the most important magic words: \`has key\`. This keyword declares that the \`struct\` we've created isn't just a bundle of data, but can become an 'Object' that can exist independently with a unique ID on the blockchain. Now, shall we create the blueprint for our first swimmer?"
+
+**Practice**
+
+"In the code editor to your right, create a \`struct\` named Swimmer. Every swimmer must have an id to be uniquely identified on the blockchain and a \`distance_traveled\` value to show how far they've gone."`,
+        readonly: false,
         codeTemplate: `module sui_mmers::swimmer_struct {
     use sui::object::{Self, UID};
 
@@ -43,12 +63,36 @@ Your task: create the \`Swimmer\` struct with the \`has key\` ability so it can 
     }
 }
 `,
+        codeSkeletone: `module sui_mmers::swimmer_struct {
+        use sui::object::{Self, UID};
+
+        public struct Swimmer has key {
+            id: UID,
+            distance_traveled: u64,
+            // TODO: add any additional swimmer fields needed for later chapters.
+        }
+    }
+`,
       },
       {
         slug: 'mint-swimmer',
-        title: 'Chapter 2 · Bring the Swimmer to life',
-        summary: 'Add a public entry function that creates a swimmer and transfers ownership.',
-        markdown: `Objects become real when we mint them. Expose a \`public entry fun mint_swimmer\` that receives \`name\` and \`species\`, creates a \`Swimmer\`, and transfers it to the caller.`,
+        title: 'Chapter 2 - Giving Life to the Swimmer',
+        summary: 'Mint a swimmer and transfer ownership to the caller.',
+        markdown: `
+        ### Chapter 2: Bringing the Swimmer to Life!
+
+**Explanation**
+
+"Great! You've created the swimmer's skeleton. But right now, it's just a blueprint; there are no actual swimmers yet. Let's create a function to 'mint' a real swimmer NFT based on this blueprint.
+
+In Move, a special function that can be called by anyone from the outside is marked as a \`public entry fun\`. It's like the 'Start' button of our game. We will create a function called \`mint_swimmer\` so that anyone who calls it can receive a new swimmer NFT.
+
+When the function executes, we'll create a new object according to the \`Swimmer\` blueprint and use the magic of transfer to pass the ownership of this NFT to you—the person who called the function! Thanks to transfer, the blockchain will clearly record that this swimmer is now your property."
+
+**Practice**
+
+Add a \`mint_swimmer\` function. This function should take a \`name\` and \`species\`, create a new \`Swimmer\` object, and then transfer it to the person who called the function (\`the sender\`).`,
+        readonly: false,
         codeTemplate: `module sui_mmers::swimmer_mint {
     use sui::object::{Self, UID};
     use sui::tx_context::{Self, TxContext};
@@ -65,7 +109,7 @@ Your task: create the \`Swimmer\` struct with the \`has key\` ability so it can 
     public entry fun mint_swimmer(
         name: vector<u8>,
         species: vector<u8>,
-        ctx: &mut TxContext
+        ctx: &mut TxContext,
     ) {
         let swimmer = Swimmer {
             id: object::new(ctx),
@@ -78,20 +122,71 @@ Your task: create the \`Swimmer\` struct with the \`has key\` ability so it can 
     }
 }
 `,
+        codeSkeletone: `module sui_mmers::swimmer_mint {
+    use sui::object::{Self, UID};
+    use sui::tx_context::{Self, TxContext};
+    use sui::transfer;
+    use std::string::{Self, String};
+
+    public struct Swimmer has key, store {
+        id: UID,
+        distance_traveled: u64,
+        name: String,
+        species: String,
+    }
+
+    public entry fun mint_swimmer(
+        name: vector<u8>,
+        species: vector<u8>,
+        ctx: &mut TxContext,
+    ) {
+        // TODO: build a Swimmer and transfer it to the caller.
+    }
+}
+`,
       },
       {
         slug: 'lazy-progress',
-        title: 'Chapter 3 · Lazy progress updates',
-        summary: 'Track elapsed time and update distance only when needed.',
-        markdown: `Smart contracts nap until someone wakes them up. Store \`last_update_timestamp_ms\` and when \`update_progress\` runs calculate how much time has passed. Multiply the elapsed time by the swimmer\'s base speed to increase \`distance_traveled\` and update the timestamp.`,
-        codeTemplate: `module sui_mmers::swimmer_progress {
+        title: "Chapter 3 - The 'Lazy Update' Pattern",
+        summary: 'Automatically calculate progress based on elapsed time.',
+        markdown: `
+        Chapter 3: A Voyage with Time
+
+        **Explanation**
+        
+        Alright, your swimmer is finally floating in the vast ocean! But... it's just sitting there, isn't it? We want this little guy to automatically move forward, even when we're not watching. Something like 'automatically advance 100 meters every hour.'
+
+        **Challenge**
+        
+        Smart Contracts Can't Wake Themselves Up\n
+        A smart contract is in a dormant state until someone calls it by sending a transaction. Therefore, the contract cannot execute a function like 'advance 100 meters every hour' on its own.
+
+        **Solution**
+        
+        Calculate Using the 'Last Update Time'
+        We use the same principle as bank interest calculation. A bank doesn't add interest to your account every second. Instead, when you make a deposit, withdrawal, or check your balance, it thinks, "Ah, this much time has passed since the last transaction, so I'll calculate the accumulated interest now and apply it!" We'll do the exact same thing!
+
+        - Save State: Store the \`last_update_timestamp_ms\` (the last time the distance was updated) in the Swimmer object.
+
+        - Calculate Distance: When someone (you!) calls a function to update the swimmer's state, the function calculates the difference between the current block time and the saved \`last_update_timestamp_ms\`.
+
+        - Update State: Add the distance calculated by (elapsed time) x (base speed) to \`distance_traveled\`, and then update \`last_update_timestamp_ms\` to the current time.
+
+        This clever method of updating the state only when needed is called the 'Lazy Update' pattern."
+
+
+**Practice:** 
+
+Extend the struct with \`last_update_timestamp_ms\` and implement \`update_progress\`. Remember to set the initial timestamp when minting.`,
+        readonly: false,
+        codeTemplate: `module sui_mmers::swimmer {
     use sui::clock::{Self, Clock};
     use sui::object::{Self, UID};
     use sui::tx_context::{Self, TxContext};
     use sui::transfer;
     use std::string::{Self, String};
 
-    const BASE_DISTANCE_PER_HOUR: u64 = {{BASE_SPEED_PER_HOUR}};
+    const BASE_DISTANCE_PER_HOUR: u64 = 100;
 
     public struct Swimmer has key, store {
         id: UID,
@@ -130,19 +225,150 @@ Your task: create the \`Swimmer\` struct with the \`has key\` ability so it can 
     }
 }
 `,
+        codeSkeletone: `module sui_mmers::swimmer {
+    use sui::clock::{Self, Clock};
+    use sui::object::{Self, UID};
+    use sui::tx_context::{Self, TxContext};
+    use sui::transfer;
+    use std::string::{Self, String};
+
+    const BASE_DISTANCE_PER_HOUR: u64 = 100;
+
+    public struct Swimmer has key, store {
+        id: UID,
+        distance_traveled: u64,
+        name: String,
+        species: String,
+        last_update_timestamp_ms: u64,
+    }
+
+    public entry fun mint_swimmer(
+        name: vector<u8>,
+        species: vector<u8>,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ) {
+        // TODO: initialise last_update_timestamp_ms with the current time.
+    }
+
+    public entry fun update_progress(swimmer: &mut Swimmer, clock: &Clock) {
+        // TODO: compute elapsed time and update distance_traveled.
+    }
+}
+`,
+      },
+      {
+        slug: 'deploy-swimmer',
+        title: 'Chapter 4 - Deploy and test',
+        summary: 'Publish the swimmer module and confirm mint and update flows.',
+        markdown: `### Deployment mission
+
+It is time to publish your swimmer module.
+
+1. Ensure your Move package matches the final module below.
+2. Run \`sui client publish --skip-dependency-verification\` inside the package directory.
+3. Call \`mint_swimmer\` and \`update_progress\` from the Sui CLI or gameplay console to verify everything works on-chain.
+
+Celebrate?your swimmer is now live!`,
+        readonly: false,
+        codeTemplate: `module sui_mmers::swimmer {
+    use sui::clock::{Self, Clock};
+    use sui::object::{Self, UID};
+    use sui::tx_context::{Self, TxContext};
+    use sui::transfer;
+    use std::string::{Self, String};
+
+    const BASE_DISTANCE_PER_HOUR: u64 = 100;
+
+    public struct Swimmer has key, store {
+        id: UID,
+        distance_traveled: u64,
+        name: String,
+        species: String,
+        last_update_timestamp_ms: u64,
+    }
+
+    public entry fun mint_swimmer(
+        name: vector<u8>,
+        species: vector<u8>,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ) {
+        let swimmer = Swimmer {
+            id: object::new(ctx),
+            distance_traveled: 0,
+            name: string::from_utf8(name).unwrap(),
+            species: string::from_utf8(species).unwrap(),
+            last_update_timestamp_ms: clock::timestamp_ms(clock),
+        };
+
+        transfer::public_transfer(swimmer, tx_context::sender(ctx));
+    }
+
+    public entry fun update_progress(swimmer: &mut Swimmer, clock: &Clock) {
+        let now = clock::timestamp_ms(clock);
+        let elapsed = now - swimmer.last_update_timestamp_ms;
+        let gained = (elapsed * BASE_DISTANCE_PER_HOUR) / 3_600_000;
+
+        if (gained > 0) {
+            swimmer.distance_traveled = swimmer.distance_traveled + gained;
+            swimmer.last_update_timestamp_ms = now;
+        }
+    }
+}
+`,
+        codeSkeletone: `module sui_mmers::swimmer {
+    use sui::clock::{Self, Clock};
+    use sui::object::{Self, UID};
+    use sui::tx_context::{Self, TxContext};
+    use sui::transfer;
+    use std::string::{Self, String};
+
+    const BASE_DISTANCE_PER_HOUR: u64 = 100;
+
+    public struct Swimmer has key, store {
+        id: UID,
+        distance_traveled: u64,
+        name: String,
+        species: String,
+        last_update_timestamp_ms: u64,
+    }
+
+    public entry fun mint_swimmer(
+        name: vector<u8>,
+        species: vector<u8>,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ) {
+        // TODO: ensure this matches the module you publish.
+    }
+
+    public entry fun update_progress(swimmer: &mut Swimmer, clock: &Clock) {
+        // TODO: ensure this matches the module you publish.
+    }
+}
+`,
       },
     ],
   },
   {
     slug: 'ptb-and-items',
-    title: 'Lesson 2 · PTB & Item Interactions',
+    title: 'Lesson 2 - PTB and Item Interactions',
     summary: 'Mint TunaCan items and feed your swimmer using atomic PTBs.',
     chapters: [
       {
         slug: 'tuna-items',
-        title: 'Chapter 1 · Energising TunaCan',
+        title: 'Chapter 1 - Energising TunaCan',
         summary: 'Create a TunaCan item that can be minted like any other object.',
-        markdown: `Swimmers get hungry! Define a \`TunaCan\` struct with \`has key, store\` and mint it with \`mint_tuna\`.`,
+        markdown: `
+        ### Chapter 1: Energizing Tuna Can! 
+        
+        Your swimmer is going to get hungry. A long journey needs fuel. In Sui, items are also objects, so we model a TunaCan just like the swimmer. Of course, items must also be unique in the world, so don't forget \`has key\`!"
+
+**Practice**
+
+In the same file, try adding a \`TunaCan\` struct and a \`mint_tuna\` function to issue tuna cans. It will be very similar to \`mint_swimmer\`!`,
+        readonly: false,
         codeTemplate: `module sui_mmers::tuna_items {
     use sui::object::{Self, UID};
     use sui::tx_context::{Self, TxContext};
@@ -154,21 +380,56 @@ Your task: create the \`Swimmer\` struct with the \`has key\` ability so it can 
     }
 
     public entry fun mint_tuna(ctx: &mut TxContext) {
-        let tuna = TunaCan { id: object::new(ctx), energy: {{TUNA_BONUS}} };
+        let tuna = TunaCan { id: object::new(ctx), energy: 10 };
         transfer::public_transfer(tuna, tx_context::sender(ctx));
+    }
+}
+`,
+        codeSkeletone: `module sui_mmers::tuna_items {
+    use sui::object::{Self, UID};
+    use sui::tx_context::{Self, TxContext};
+    use sui::transfer;
+
+    public struct TunaCan has key, store {
+        id: UID,
+        energy: u64,
+    }
+
+    public entry fun mint_tuna(ctx: &mut TxContext) {
+        // TODO: create a TunaCan and transfer it to the caller.
     }
 }
 `,
       },
       {
         slug: 'eat-tuna',
-        title: 'Chapter 2 · Atomic tuna buffet',
-        summary: 'Use a PTB to update distance and consume the TunaCan in one go.',
-        markdown: `The \`eat_tuna\` entry function takes a mutable swimmer reference and a TunaCan. Increase \`distance_traveled\` and destroy the consumed tuna object so balances stay consistent.`,
+        title: 'Chapter 2 - Gulp! PTBs and consuming objects',
+        summary: 'Use an atomic PTB to feed tuna cans to swimmers.',
+        markdown: `
+        ### Chapter 2: Gulp!
+
+        **Explanation**
+
+You now have both a swimmer and a tuna can in your wallet! It's finally time to feed the tuna to your swimmer. Here, you will learn about one of Sui's most powerful features: \`PTBs (Programmable Transaction Blocks)\`.
+
+The act of 'eating tuna' actually involves two things that must happen at the same time:
+
+1. The swimmer's travel distance increases.
+
+2. The used tuna can disappears.
+
+If only #1 succeeds and #2 fails, you've created an infinite-energy tuna can, right? On the other hand, if the tuna disappears but the swimmer's stats don't change, you'd feel cheated.
+
+A PTB is a technology that bundles multiple actions like these into a single transaction. The \`eat_tuna\` function we will create will contain both of these actions, and when called via a PTB, both operations will either **'all succeed'** or, if even one fails, **'all be undone'**. This characteristic is called **'Atomicity'**, and it allows us to interact with objects very safely!
+
+**Practice**
+
+Create an \`eat_tuna\` function. This function will take two objects as arguments: a \`Swimmer\` and a \`TunaCan\`. It should increase the \`Swimmer's distance_traveled\` by 10 and completely delete the \`TunaCan\` using \`object::delete\`. Remember to use \`&mut Swimmer\` (a mutable reference) to modify the Swimmer's values, and to take the entire \`TunaCan\` object by value to consume and destroy it!
+
+`,
+        readonly: false,
         codeTemplate: `module sui_mmers::tuna_buffet {
     use sui::object::{Self, UID};
-    use sui::tx_context::{Self, TxContext};
-    use sui::transfer;
 
     public struct Swimmer has key, store {
         id: UID,
@@ -187,28 +448,116 @@ Your task: create the \`Swimmer\` struct with the \`has key\` ability so it can 
     }
 }
 `,
+        codeSkeletone: `module sui_mmers::tuna_buffet {
+    use sui::object::{Self, UID};
+
+    public struct Swimmer has key, store {
+        id: UID,
+        distance_traveled: u64,
+    }
+
+    public struct TunaCan has key, store {
+        id: UID,
+        energy: u64,
+    }
+
+    public entry fun eat_tuna(swimmer: &mut Swimmer, tuna: TunaCan) {
+        // TODO: add energy to the swimmer and delete the tuna object.
+    }
+}
+`,
+      },
+      {
+        slug: 'deploy-tuna',
+        title: 'Chapter 3 - Deploy the tuna flow',
+        summary: 'Publish the tuna can module and rehearse the PTB sequence.',
+        markdown: `### Deployment mission
+
+Your swimmers need fuel. Package the TunaCan logic and push it on-chain.
+
+1. Publish the module below.
+2. Mint a few tuna cans with \`mint_tuna\`.
+3. Feed a swimmer by calling \`eat_tuna\` inside a programmable transaction block so the distance increase and tuna deletion happen atomically.`,
+        readonly: false,
+        codeTemplate: `module sui_mmers::tuna_service {
+    use sui::object::{Self, UID};
+    use sui::tx_context::{Self, TxContext};
+    use sui::transfer;
+
+    const ENERGY_PER_CAN: u64 = 10;
+
+    public struct Swimmer has key, store {
+        id: UID,
+        distance_traveled: u64,
+    }
+
+    public struct TunaCan has key, store {
+        id: UID,
+        energy: u64,
+    }
+
+    public entry fun mint_tuna(ctx: &mut TxContext) {
+        let tuna = TunaCan { id: object::new(ctx), energy: ENERGY_PER_CAN };
+        transfer::public_transfer(tuna, tx_context::sender(ctx));
+    }
+
+    public entry fun eat_tuna(swimmer: &mut Swimmer, tuna: TunaCan) {
+        let TunaCan { id, energy } = tuna;
+        swimmer.distance_traveled = swimmer.distance_traveled + energy;
+        object::delete(id);
+    }
+}
+`,
+        codeSkeletone: `module sui_mmers::tuna_service {
+    use sui::object::{Self, UID};
+    use sui::tx_context::{Self, TxContext};
+    use sui::transfer;
+
+    const ENERGY_PER_CAN: u64 = 10;
+
+    public struct Swimmer has key, store {
+        id: UID,
+        distance_traveled: u64,
+    }
+
+    public struct TunaCan has key, store {
+        id: UID,
+        energy: u64,
+    }
+
+    public entry fun mint_tuna(ctx: &mut TxContext) {
+        // TODO: mint a TunaCan with ENERGY_PER_CAN energy.
+    }
+
+    public entry fun eat_tuna(swimmer: &mut Swimmer, tuna: TunaCan) {
+        // TODO: consume the tuna and boost the swimmer.
+    }
+}
+`,
       },
     ],
   },
   {
     slug: 'shared-registry',
-    title: 'Lesson 3 · Shared Registry & Leaderboard',
+    title: 'Lesson 3 - Shared Registry and Leaderboard',
     summary: 'Introduce a shared SwimmerRegistry so everyone can discover swimmers.',
     chapters: [
       {
         slug: 'shared-registry',
-        title: 'Chapter 1 · Build the registry',
+        title: 'Chapter 1 - Swimming Together',
         summary: 'Share a SwimmerRegistry that maps swimmer IDs to owners.',
-        markdown: `Owned objects live in private islands. A shared \`SwimmerRegistry\` lets everyone discover new competitors.
+        markdown: `Owned objects live on private islands; no one else can see them. To help everyone discover new swimmers we create a shared object called \`SwimmerRegistry\`. Every time a swimmer is minted we record its ID and owner on the registry.
 
-Update \`mint_swimmer\` so every minted swimmer adds an entry to the registry table before transferring ownership.`,
+**Practice:** Define a \`SwimmerRegistry\` shared object and update \`mint_swimmer\` so that each new swimmer registers itself before ownership transfers.`,
+        readonly: false,
         codeTemplate: `module sui_mmers::registry {
     use sui::clock::{Self, Clock};
-    use sui::object::{Self, UID};
+    use sui::object::{Self, UID, ID};
     use sui::table::{Self, Table};
     use sui::tx_context::{Self, TxContext};
     use sui::transfer;
     use std::string::{Self, String};
+    use sui::address;
 
     public struct Swimmer has key, store {
         id: UID,
@@ -220,7 +569,7 @@ Update \`mint_swimmer\` so every minted swimmer adds an entry to the registry ta
 
     public struct SwimmerRegistry has key {
         id: UID,
-        swimmers: Table<address, address>,
+        swimmers: Table<ID, address>,
     }
 
     fun init(ctx: &mut TxContext) {
@@ -244,7 +593,153 @@ Update \`mint_swimmer\` so every minted swimmer adds an entry to the registry ta
             last_update_timestamp_ms: clock::timestamp_ms(clock),
         };
 
-        table::add(&mut registry.swimmers, object::uid_to_address(&swimmer.id), owner);
+        table::add(&mut registry.swimmers, object::id(&swimmer), owner);
+        transfer::public_transfer(swimmer, owner);
+    }
+}
+`,
+        codeSkeletone: `module sui_mmers::registry {
+    use sui::clock::{Self, Clock};
+    use sui::object::{Self, UID, ID};
+    use sui::table::{Self, Table};
+    use sui::tx_context::{Self, TxContext};
+    use sui::transfer;
+    use std::string::{Self, String};
+    use sui::address;
+
+    public struct Swimmer has key, store {
+        id: UID,
+        distance_traveled: u64,
+        name: String,
+        species: String,
+        last_update_timestamp_ms: u64,
+    }
+
+    public struct SwimmerRegistry has key {
+        id: UID,
+        swimmers: Table<ID, address>,
+    }
+
+    fun init(ctx: &mut TxContext) {
+        // TODO: create and share the registry object.
+    }
+
+    public entry fun mint_swimmer(
+        registry: &mut SwimmerRegistry,
+        name: vector<u8>,
+        species: vector<u8>,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ) {
+        // TODO: register the swimmer and transfer it to the owner.
+    }
+}
+`,
+      },
+      {
+        slug: 'deploy-registry',
+        title: 'Chapter 2 - Deploy the registry',
+        summary: 'Publish the shared registry so every swimmer can be discovered.',
+        markdown: `### Deployment mission
+
+Share the SwimmerRegistry so every new swimmer announces itself.
+
+1. Publish the module below.
+2. Run \`init\` once to create and share the registry object.
+3. Mint swimmers with \`mint_swimmer\`; confirm each ID appears in the registry table.`,
+        readonly: false,
+        codeTemplate: `module sui_mmers::registry {
+    use sui::clock::{Self, Clock};
+    use sui::object::{Self, UID, ID};
+    use sui::table::{Self, Table};
+    use sui::tx_context::{Self, TxContext};
+    use sui::transfer;
+    use std::string::{Self, String};
+    use sui::address;
+
+    public struct Swimmer has key, store {
+        id: UID,
+        distance_traveled: u64,
+        name: String,
+        species: String,
+        last_update_timestamp_ms: u64,
+    }
+
+    public struct SwimmerRegistry has key {
+        id: UID,
+        swimmers: Table<ID, address>,
+    }
+
+    fun init(ctx: &mut TxContext) {
+        let registry = SwimmerRegistry { id: object::new(ctx), swimmers: table::new(ctx) };
+        transfer::share_object(registry);
+    }
+
+    public entry fun mint_swimmer(
+        registry: &mut SwimmerRegistry,
+        name: vector<u8>,
+        species: vector<u8>,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ) {
+        let owner = tx_context::sender(ctx);
+        let swimmer = Swimmer {
+            id: object::new(ctx),
+            distance_traveled: 0,
+            name: string::from_utf8(name).unwrap(),
+            species: string::from_utf8(species).unwrap(),
+            last_update_timestamp_ms: clock::timestamp_ms(clock),
+        };
+
+        table::add(&mut registry.swimmers, object::id(&swimmer), owner);
+        transfer::public_transfer(swimmer, owner);
+    }
+}
+`,
+        codeSkeletone: `module sui_mmers::registry {
+    use sui::clock::{Self, Clock};
+    use sui::object::{Self, UID, ID};
+    use sui::table::{Self, Table};
+    use sui::tx_context::{Self, TxContext};
+    use sui::transfer;
+    use std::string::{Self, String};
+    use sui::address;
+
+    public struct Swimmer has key, store {
+        id: UID,
+        distance_traveled: u64,
+        name: String,
+        species: String,
+        last_update_timestamp_ms: u64,
+    }
+
+    public struct SwimmerRegistry has key {
+        id: UID,
+        swimmers: Table<ID, address>,
+    }
+
+    fun init(ctx: &mut TxContext) {
+        let registry = SwimmerRegistry { id: object::new(ctx), swimmers: table::new(ctx) };
+        transfer::share_object(registry);
+    }
+
+    public entry fun mint_swimmer(
+        registry: &mut SwimmerRegistry,
+        name: vector<u8>,
+        species: vector<u8>,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ) {
+        let owner = tx_context::sender(ctx);
+        let swimmer = Swimmer {
+            id: object::new(ctx),
+            distance_traveled: 0,
+            name: string::from_utf8(name).unwrap(),
+            species: string::from_utf8(species).unwrap(),
+            last_update_timestamp_ms: clock::timestamp_ms(clock),
+        };
+
+        table::add(&mut registry.swimmers, object::id(&swimmer), owner);
         transfer::public_transfer(swimmer, owner);
     }
 }
@@ -252,4 +747,4 @@ Update \`mint_swimmer\` so every minted swimmer adds an entry to the registry ta
       },
     ],
   },
-]
+];
