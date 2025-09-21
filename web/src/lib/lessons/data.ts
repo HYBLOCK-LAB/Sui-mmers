@@ -326,7 +326,7 @@ Celebrate! your swimmer is now live!`,
 
     const MS_PER_MIN: u64 = 60_000;
 
-    public struct Swimmer has key {
+    public struct Swimmer has key, store {
         id: UID,
         name: String,
         color: String,
