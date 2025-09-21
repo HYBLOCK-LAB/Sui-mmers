@@ -4,9 +4,9 @@ import { Button } from '@/components/ui/button';
 export default function Home() {
   return (
     <div className="min-h-screen flex flex-col border-gray-200">
-      <main className="flex-1 flex items-center justify-center relative">
+      <main className="flex-1 flex flex-row my-auto items-center justify-between relative mx-40">
         {/* 왼쪽 버튼 - 중앙에 배치 */}
-        <div className="absolute left-[300px] top-[400px] transform -translate-y-1/2 z-10">
+        <div className="transform -translate-y-1/2 z-10">
           <div className="space-y-4">
             <h1 className="text-4xl font-bold text-gray-900">Sui-mmers</h1>
             <p className="text-base text-gray-600">Dive into Sui and Move through a fun swimming game!</p>
@@ -22,7 +22,7 @@ export default function Home() {
         </div>
 
         {/* 오른쪽 로고 - 크게 표시 */}
-        <div className="absolute right-[185px] top-[400px] transform -translate-y-1/2">
+        <div className="transform -translate-y-1/4">
           <img src="/sui-mmers-logo.png" alt="Sui-mmers Logo" className="h-[70vh] w-auto object-contain" />
         </div>
       </main>
