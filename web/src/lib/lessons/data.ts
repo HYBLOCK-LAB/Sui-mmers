@@ -115,7 +115,8 @@ In Move, a special function that can be called by anyone from the outside is mar
 
 When the function executes, we'll create a new object according to the \`Swimmer\` blueprint and use the magic of transfer to pass the ownership of this NFT to you—the person who called the function! Thanks to transfer, the blockchain will clearly record that this swimmer is now your property."
 
-Practice
+**Practice**
+
 Add a public entry fun named \`mint_swimmer\`. This function should create a new \`Swimmer\` object based on user inputs and initial default values, and then transfer it to the person who called the function (the sender).
 
 Function Parameters:
@@ -218,7 +219,7 @@ Extend the struct with \`last_update_timestamp_ms\` and implement \`update_progr
     use sui::tx_context::{Self, TxContext};
     use std::string::{Self, String};
 
-    const MS_PER_HOUR: u64 = 3_600_000;
+    const MS_PER_MIN: u64 = 60_000;
 
     public struct Swimmer has key, store {
         id: UID,
@@ -255,7 +256,7 @@ Extend the struct with \`last_update_timestamp_ms\` and implement \`update_progr
     public entry fun update_progress(swimmer: &mut Swimmer, clock: &Clock) {
         let now = clock::timestamp_ms(clock);
         let elapsed_ms = now - swimmer.last_update_timestamp_ms;
-        let distance_gained = (elapsed_ms * swimmer.speed) / MS_PER_HOUR;
+        let distance_gained = (elapsed_ms * swimmer.speed) / MS_PER_MIN;
 
         if (distance_gained > 0) {
             swimmer.distance_traveled += distance_gained;
@@ -270,7 +271,7 @@ Extend the struct with \`last_update_timestamp_ms\` and implement \`update_progr
     use sui::tx_context::{Self, TxContext};
     use std::string::{Self, String};
 
-    const MS_PER_HOUR: u64 = 3_600_000;
+    const MS_PER_MIN: u64 = 60_000;
 
     public struct Swimmer has key, store {
         id: UID,
@@ -298,7 +299,7 @@ Extend the struct with \`last_update_timestamp_ms\` and implement \`update_progr
     public entry fun update_progress(swimmer: &mut Swimmer, clock: &Clock) {
         let now = clock::timestamp_ms(clock);
         let elapsed_ms = now - swimmer.last_update_timestamp_ms;
-        let distance_gained = (elapsed_ms * swimmer.speed) / MS_PER_HOUR;
+        let distance_gained = (elapsed_ms * swimmer.speed) / MS_PER_MIN;
 
         if (distance_gained > 0) {
             // TODO: compute elapsed time and update distance_traveled.
@@ -323,7 +324,7 @@ Celebrate! your swimmer is now live!`,
     use sui::tx_context::{Self, TxContext};
     use std::string::{Self, String};
 
-    const MS_PER_HOUR: u64 = 3_600_000;
+    const MS_PER_MIN: u64 = 60_000;
 
     public struct Swimmer has key {
         id: UID,
@@ -343,15 +344,25 @@ Celebrate! your swimmer is now live!`,
         clock: &Clock,
         ctx: &mut TxContext,
     ) {
-        // TODO: Construct Swimmer using string::utf8 and clock::timestamp_ms(clock)
-        // transfer::public_transfer(swimmer, tx_context::sender(ctx));
+        let swimmer = Swimmer {
+            id: object::new(ctx),
+            name: string::utf8(name),
+            color: string::utf8(color),
+            speed: speed,
+            hunger: 100,
+            boost: 0,
+            distance_traveled: 0,
+            last_update_timestamp_ms: clock::timestamp_ms(clock),
+        };
+
+        transfer::public_transfer(swimmer, tx_context::sender(ctx));
     }
 
     public entry fun update_progress(swimmer: &mut Swimmer, clock: &Clock) {
         let now = clock::timestamp_ms(clock);
         let elapsed_ms = now - swimmer.last_update_timestamp_ms;
         let effective_speed = swimmer.speed + swimmer.boost;
-        let distance_gained = (elapsed_ms * effective_speed) / MS_PER_HOUR;
+        let distance_gained = (elapsed_ms * effective_speed) / MS_PER_MIN;
 
         if (distance_gained > 0) {
             swimmer.distance_traveled = swimmer.distance_traveled + distance_gained;
@@ -367,7 +378,7 @@ Celebrate! your swimmer is now live!`,
     use sui::tx_context::{Self, TxContext};
     use std::string::{Self, String};
 
-    const MS_PER_HOUR: u64 = 3_600_000;
+    const MS_PER_MIN: u64 = 60_000;
 
     public struct Swimmer has key {
         id: UID,
@@ -795,7 +806,7 @@ Share the SwimmerRegistry so every new swimmer announces itself.
     use sui::address;
     use std::string::{Self, String};
 
-    const MS_PER_HOUR: u64 = 3_600_000;
+    const MS_PER_MIN: u64 = 60_000;
 
     public struct Swimmer has key, store {
         id: UID,
@@ -882,7 +893,7 @@ Share the SwimmerRegistry so every new swimmer announces itself.
         if (elapsed_ms == 0) { return; }
 
         let effective_speed = swimmer.speed + swimmer.boost;
-        let distance_gained = (elapsed_ms * effective_speed) / MS_PER_HOUR;
+        let distance_gained = (elapsed_ms * effective_speed) / MS_PER_MIN;
         let hunger_consumed = distance_gained;
 
         if (swimmer.hunger > hunger_consumed) {
@@ -912,7 +923,7 @@ Share the SwimmerRegistry so every new swimmer announces itself.
     use sui::address;
     use std::string::{Self, String};
 
-    const MS_PER_HOUR: u64 = 3_600_000;
+    const MS_PER_MIN: u64 = 60_000;
 
     public struct Swimmer has key, store {
         id: UID,
@@ -999,7 +1010,7 @@ Share the SwimmerRegistry so every new swimmer announces itself.
         if (elapsed_ms == 0) { return; }
 
         let effective_speed = swimmer.speed + swimmer.boost;
-        let distance_gained = (elapsed_ms * effective_speed) / MS_PER_HOUR;
+        let distance_gained = (elapsed_ms * effective_speed) / MS_PER_MIN;
         let hunger_consumed = distance_gained;
 
         if (swimmer.hunger > hunger_consumed) {
