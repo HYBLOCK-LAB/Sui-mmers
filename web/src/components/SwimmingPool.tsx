@@ -223,10 +223,10 @@ export function SwimmingPool({
   const selectedTuna = tunaCans.find(tuna => tuna.id === selectedTunaId)
 
   const formatTimestamp = (timestamp: number) => {
-    if (!timestamp) return '미갱신'
+    if (!timestamp) return 'Not updated'
     const date = new Date(Number(timestamp))
     if (Number.isNaN(date.getTime())) {
-      return '미갱신'
+      return 'Not updated'
     }
     return date.toLocaleString()
   }
@@ -256,10 +256,10 @@ export function SwimmingPool({
                 className="w-16 h-16 mx-auto mb-4" 
               />
               <p className="text-gray-700 font-medium">
-                수영 선수를 생성하면 여기에 표시됩니다!
+                Mint a swimmer to see them here!
               </p>
               <p className="text-sm text-gray-500 mt-2">
-                지갑 연결 후 코드를 배포해보세요
+                Connect your wallet and deploy the code.
               </p>
             </div>
           </div>
@@ -268,12 +268,12 @@ export function SwimmingPool({
         {/* 게임 콘솔 컨트롤 패널 */}
         <div className="bg-white/80 border border-gray-200 rounded-xl p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">🎮 게임 콘솔</h3>
-            <span className="text-xs text-gray-500">인벤토리 {tunaCans.length}개</span>
+            <h3 className="text-lg font-semibold text-gray-900">🎮 Game Console</h3>
+            <span className="text-xs text-gray-500">Inventory {tunaCans.length}</span>
           </div>
 
           <div className="text-center text-gray-500 py-4">
-            <p>먼저 Swimmer를 민팅한 후 게임을 시작하세요</p>
+            <p>Mint a swimmer first and then start playing.</p>
           </div>
 
           <div className="flex flex-wrap gap-2 mb-3">
@@ -282,12 +282,12 @@ export function SwimmingPool({
               disabled={!packageId || !currentAccount || actionLoading === 'mintTuna'}
               className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {actionLoading === 'mintTuna' ? '민팅 중...' : '🍣 참치 민팅'}
+              {actionLoading === 'mintTuna' ? 'Minting...' : '🍣 Mint Tuna'}
             </button>
           </div>
 
           <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
-            💡 먼저 Swimmer를 민팅하고 게임을 시작해보세요
+            💡 Mint a swimmer first and then start the game.
           </div>
         </div>
       </div>
@@ -345,7 +345,7 @@ export function SwimmingPool({
                     {swimmer.species}
                   </div>
                   <div className="text-xs text-blue-600">
-                    총 이동 {swimmer.distanceTraveled}m
+                    Total distance {swimmer.distanceTraveled}m
                   </div>
                 </div>
               </div>
@@ -355,13 +355,13 @@ export function SwimmingPool({
         
         {/* 능력치 표시 */}
         <div className="absolute top-4 right-4 bg-white/70 rounded-lg p-3 shadow">
-          <h4 className="font-semibold text-sm mb-2">선수 현황</h4>
+          <h4 className="font-semibold text-sm mb-2">Swimmer Status</h4>
           {swimmers.map(swimmer => (
             <div key={swimmer.id} className="text-xs mb-1">
               <span className="font-medium">{swimmer.name}</span>
               <div className="flex gap-3 text-gray-600">
-                <span>기본 속도: {swimmer.baseSpeedPerHour}m/h</span>
-                <span>마지막 업데이트: {formatTimestamp(swimmer.lastUpdateTimestampMs)}</span>
+                <span>Base speed: {swimmer.baseSpeedPerHour}m/h</span>
+                <span>Last update: {formatTimestamp(swimmer.lastUpdateTimestampMs)}</span>
               </div>
             </div>
           ))}
@@ -371,21 +371,21 @@ export function SwimmingPool({
       {/* 게임 콘솔 컨트롤 패널 */}
       <div className="bg-white/80 border border-gray-200 rounded-xl p-6 shadow-sm">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">🎮 게임 콘솔</h3>
-          <span className="text-xs text-gray-500">인벤토리 {tunaCans.length}개</span>
+          <h3 className="text-lg font-semibold text-gray-900">🎮 Game Console</h3>
+          <span className="text-xs text-gray-500">Inventory {tunaCans.length}</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Swimmer 선택</label>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Select Swimmer</label>
             <select
               value={selectedSwimmerId}
               onChange={(event) => onSwimmerSelect?.(event.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               disabled={swimmers.length === 0}
             >
-              {swimmers.length === 0 ? (
-                <option>먼저 Swimmer를 민팅하세요</option>
+            {swimmers.length === 0 ? (
+                <option>Mint a swimmer first</option>
               ) : (
                 swimmers.map((swimmer) => (
                   <option key={swimmer.id} value={swimmer.id}>
@@ -396,13 +396,13 @@ export function SwimmingPool({
             </select>
             {selectedSwimmer && (
               <p className="mt-1 text-xs text-gray-500">
-                기본 속도 {selectedSwimmer.baseSpeedPerHour}m/h
+                Base speed {selectedSwimmer.baseSpeedPerHour}m/h
               </p>
             )}
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">TunaCan 인벤토리</label>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">TunaCan Inventory</label>
             <select
               value={selectedTunaId}
               onChange={(event) => onTunaSelect?.(event.target.value)}
@@ -410,7 +410,7 @@ export function SwimmingPool({
               disabled={tunaCans.length === 0}
             >
               {tunaCans.length === 0 ? (
-                <option>참치를 민팅하면 여기에 표시됩니다</option>
+                <option>Mint a TunaCan to see it here</option>
               ) : (
                 tunaCans.map((tuna) => (
                   <option key={tuna.id} value={tuna.id}>
@@ -420,12 +420,12 @@ export function SwimmingPool({
               )}
             </select>
             {selectedTuna && (
-              <p className="mt-1 text-xs text-gray-500">보너스 거리 +{selectedTuna.energy}m</p>
+              <p className="mt-1 text-xs text-gray-500">Bonus distance +{selectedTuna.energy}m</p>
             )}
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">수영모 색상 (RGB)</label>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Swim Cap Color (RGB)</label>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <span className="text-xs w-4">R</span>
@@ -464,7 +464,7 @@ export function SwimmingPool({
                 <span className="text-xs w-8 text-center">{selectedColor.b}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs">미리보기:</span>
+                <span className="text-xs">Preview:</span>
                 <div
                   className="w-6 h-6 rounded border border-gray-300"
                   style={{ backgroundColor: `rgb(${selectedColor.r}, ${selectedColor.g}, ${selectedColor.b})` }}
@@ -480,26 +480,26 @@ export function SwimmingPool({
             disabled={!packageId || !currentAccount || !selectedSwimmerId || actionLoading === 'update'}
             className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {actionLoading === 'update' ? '업데이트 중...' : '⏱ 자동 전진'}
+            {actionLoading === 'update' ? 'Updating...' : '⏱ Auto Progress'}
           </button>
           <button
             onClick={onMintTuna}
             disabled={!packageId || !currentAccount || actionLoading === 'mintTuna'}
             className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {actionLoading === 'mintTuna' ? '민팅 중...' : '🍣 참치 민팅'}
+            {actionLoading === 'mintTuna' ? 'Minting...' : '🍣 Mint Tuna'}
           </button>
           <button
             onClick={onEatTuna}
             disabled={!packageId || !currentAccount || !selectedSwimmerId || !selectedTunaId || actionLoading === 'eatTuna'}
             className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {actionLoading === 'eatTuna' ? '처리 중...' : '🍽 먹이기'}
+            {actionLoading === 'eatTuna' ? 'Processing...' : '🍽 Feed'}
           </button>
         </div>
 
         <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
-          💡 update_progress → mint_tuna → eat_tuna 순서로 진행해보세요
+          💡 Try running update_progress → mint_tuna → eat_tuna in order.
         </div>
       </div>
     </div>

@@ -85,11 +85,11 @@ export function LessonPageClient({
   const fetchPersistedPackage = useCallback(
     async (address: string) => {
       try {
-        console.log('[LessonPageClient] Supabase 패키지 조회 시도', { address });
+        console.log('[LessonPageClient] attempting to fetch package from Supabase', { address });
         const response = await fetch(`/api/deployments?walletAddress=${address}`);
         if (!response.ok) {
           const message = await response.text();
-          console.warn('[LessonPageClient] 패키지 정보를 불러오지 못했습니다.', message);
+          console.warn('[LessonPageClient] failed to fetch package info', message);
           return;
         }
 
@@ -99,10 +99,10 @@ export function LessonPageClient({
           if (typeof window !== 'undefined') {
             window.localStorage.setItem('smr-package-id', storedPackageId);
           }
-          console.log('[LessonPageClient] Supabase 패키지 조회 성공', { storedPackageId });
+          console.log('[LessonPageClient] package fetched from Supabase', { storedPackageId });
         }
       } catch (error) {
-        console.error('[LessonPageClient] Supabase 패키지 조회 실패', error);
+        console.error('[LessonPageClient] error fetching package info from Supabase', error);
       }
     },
     []
@@ -176,11 +176,11 @@ export function LessonPageClient({
         } catch (error) {
           const message = (error as Error)?.message ?? String(error);
           if (!message.includes('Could not find the referenced transaction')) {
-            console.error('[LessonPageClient] digest 기반 패키지 조회 실패', error);
+            console.error('[LessonPageClient] failed to fetch package id by digest', error);
             return null;
           }
           console.warn(
-            `[LessonPageClient] 트랜잭션 정보를 아직 찾지 못했습니다. 재시도합니다... (시도 ${attempt + 1}/${maxAttempts})`
+            `[LessonPageClient] transaction not yet available, retrying... (attempt ${attempt + 1}/${maxAttempts})`
           );
         }
 
@@ -189,7 +189,7 @@ export function LessonPageClient({
         }
       }
 
-      console.warn('[LessonPageClient] 모든 재시도 후에도 패키지 ID를 찾지 못했습니다.');
+      console.warn('[LessonPageClient] package id not found after all retries');
       return null;
     },
     []
@@ -197,7 +197,7 @@ export function LessonPageClient({
 
   const handleCompileAndDeploy = async (transaction: any) => {
     if (!currentAccount) {
-      alert('먼저 지갑을 연결해주세요!');
+      alert('Please connect your wallet first!');
       return;
     }
 
@@ -213,9 +213,7 @@ export function LessonPageClient({
         },
         {
           onSuccess: async (result) => {
-            console.log('Transaction successful with full result:', result);
-
-            console.log('Effects:', result.effects);
+            console.log('[LessonPageClient] transaction succeeded', result);
 
             // Extract package ID from objectChanges for published packages
             let deployedPackageId = extractPackageIdFromObjectChanges((result as any).objectChanges);
@@ -227,23 +225,23 @@ export function LessonPageClient({
             if (deployedPackageId) {
               handlePackageDeployed(deployedPackageId);
               ApiMoveCompiler.persistDeploymentResult(transaction, deployedPackageId).catch((error) => {
-                console.error('[LessonPageClient] Supabase 저장 비동기 오류', error);
+                console.error('[LessonPageClient] async Supabase persist error', error);
               });
-              alert(`🚀 패키지가 성공적으로 배포되었습니다!\n\nPackage ID: ${deployedPackageId}`);
+              alert(`🚀 Package deployed successfully!\n\nPackage ID: ${deployedPackageId}`);
             } else {
-              console.log('Could not extract package ID from transaction result');
-              alert('🎉 트랜잭션이 성공했습니다! 하지만 패키지 ID 확인에 실패했습니다.');
+              console.log('[LessonPageClient] could not determine package id');
+              alert('🎉 Transaction succeeded! However, package ID could not be determined.');
             }
           },
           onError: (error) => {
             console.error('Transaction failed:', error);
-            alert('트랜잭션 실패: ' + error.message);
+            alert('Transaction failed: ' + error.message);
           },
         }
       );
     } catch (error) {
       console.error('Failed to execute transaction:', error);
-      alert('트랜잭션 실행 실패: ' + (error as Error).message);
+      alert('Failed to execute transaction: ' + (error as Error).message);
     } finally {
       setIsDeploying(false);
     }
@@ -261,7 +259,7 @@ export function LessonPageClient({
 
   const handleMintSwimmer = async (name: string, species: string) => {
     if (!packageId) {
-      alert('먼저 스마트 컨트랙트를 배포해주세요!');
+      alert('Please deploy the smart contract first!');
       return;
     }
 
@@ -279,17 +277,17 @@ export function LessonPageClient({
         },
         {
           onSuccess: () => {
-            alert('🎉 새로운 Swimmer NFT가 도착했어요!');
+            alert('🎉 A new Swimmer NFT has arrived!');
           },
           onError: (error) => {
             console.error('Transaction failed:', error);
-            alert('트랜잭션 실패: ' + error.message);
+            alert('Transaction failed: ' + error.message);
           },
         }
       );
     } catch (error) {
       console.error('Failed to create swimmer:', error);
-      alert('수영 선수 생성 실패!');
+      alert('Failed to create swimmer!');
     } finally {
       setIsMinting(false);
     }

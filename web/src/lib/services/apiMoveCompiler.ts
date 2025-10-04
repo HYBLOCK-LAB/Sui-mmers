@@ -94,7 +94,7 @@ export class ApiMoveCompiler {
         walletAddress: options.persist.walletAddress,
         lessonSlug: options.persist.lessonSlug,
       });
-      console.log('[ApiMoveCompiler] 배포 메타데이터 등록 완료', options.persist);
+      console.log('[ApiMoveCompiler] deployment metadata registered', options.persist);
     }
 
     return tx;
@@ -123,18 +123,18 @@ export class ApiMoveCompiler {
   }
 
   static async persistDeploymentResult(tx: Transaction, packageId: string) {
-    console.log('[ApiMoveCompiler] persistDeploymentResult 호출', { packageId });
+    console.log('[ApiMoveCompiler] persistDeploymentResult called', { packageId });
     const metadata = this.deploymentMetadata.get(tx);
 
     if (!metadata) {
-      console.warn('[ApiMoveCompiler] 저장할 배포 메타데이터를 찾지 못했습니다.');
+      console.warn('[ApiMoveCompiler] no deployment metadata found for transaction');
       return;
     }
 
     this.deploymentMetadata.delete(tx);
 
     try {
-      console.log('[ApiMoveCompiler] Supabase 배포 정보 저장 시도', {
+      console.log('[ApiMoveCompiler] attempting to persist deployment', {
         packageId,
         walletAddress: metadata.walletAddress,
         lessonSlug: metadata.lessonSlug,
@@ -154,12 +154,12 @@ export class ApiMoveCompiler {
 
       if (!response.ok) {
         const message = await response.text();
-        console.warn('[ApiMoveCompiler] Supabase 저장 실패', message);
+        console.warn('[ApiMoveCompiler] failed to persist deployment', message);
       } else {
-        console.log('[ApiMoveCompiler] Supabase 저장 성공', { packageId });
+        console.log('[ApiMoveCompiler] deployment persisted successfully', { packageId });
       }
     } catch (error) {
-      console.error('[ApiMoveCompiler] Supabase 저장 중 오류', error);
+      console.error('[ApiMoveCompiler] error while persisting deployment', error);
     }
   }
 
@@ -174,7 +174,7 @@ export class ApiMoveCompiler {
     use sui::tx_context::{Self, TxContext};
     use std::string::{Self, String};
     
-    /// Swimmer NFT - 우리의 수영 선수!
+    /// Swimmer NFT - our swimmer!
     public struct Swimmer has key, store {
         id: UID,
         name: String,
@@ -182,7 +182,7 @@ export class ApiMoveCompiler {
         distance_traveled: u64,
     }
     
-    /// 새로운 Swimmer NFT 생성하기
+    /// Mint a new Swimmer NFT
     public entry fun mint_swimmer(
         name: vector<u8>,
         species: vector<u8>,
@@ -198,7 +198,7 @@ export class ApiMoveCompiler {
         transfer::public_transfer(swimmer, tx_context::sender(ctx));
     }
     
-    /// Swimmer를 앞으로 이동시키기
+    /// Move the swimmer forward
     public entry fun swim_forward(
         swimmer: &mut Swimmer,
         distance: u64,
@@ -206,7 +206,7 @@ export class ApiMoveCompiler {
         swimmer.distance_traveled = swimmer.distance_traveled + distance;
     }
     
-    /// Getter 함수들
+    /// Getter functions
     public fun get_name(swimmer: &Swimmer): &String {
         &swimmer.name
     }

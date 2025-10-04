@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    console.log('[GET /api/deployments] 요청 수신', { walletAddress });
+    console.log('[GET /api/deployments] request received', { walletAddress });
     const supabase = createSupabaseServerClient();
     const { data, error } = await supabase
       .from(TABLE_NAME)
@@ -29,15 +29,13 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: '패키지 정보를 불러오지 못했습니다.' }, { status: 500 });
     }
 
-    console.log('[GET /api/deployments] 조회 결과', { walletAddress, packageId: data?.package_id });
-
     return NextResponse.json({
       packageId: data?.package_id ?? null,
       record: data ?? null,
     });
   } catch (error) {
-    console.error('[GET /api/deployments] 서버 오류', error);
-    return NextResponse.json({ error: '서버에서 예기치 못한 오류가 발생했습니다.' }, { status: 500 });
+    console.error('[GET /api/deployments] unexpected server error', error);
+    return NextResponse.json({ error: 'Unexpected server error occurred.' }, { status: 500 });
   }
 }
 
@@ -45,11 +43,11 @@ export async function POST(request: Request) {
   const { walletAddress, packageId, lessonSlug } = await request.json().catch(() => ({}));
 
   if (!walletAddress || !packageId) {
-    return NextResponse.json({ error: 'walletAddress 와 packageId 는 필수 값입니다.' }, { status: 400 });
+    return NextResponse.json({ error: 'walletAddress and packageId are required.' }, { status: 400 });
   }
 
   try {
-    console.log('[POST /api/deployments] 저장 요청', { walletAddress, packageId, lessonSlug });
+    console.log('[POST /api/deployments] save request', { walletAddress, packageId, lessonSlug });
     const supabase = createSupabaseServerClient();
 
     const payload = {
@@ -65,18 +63,16 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     if (error) {
-      console.error('[POST /api/deployments] Supabase 오류', error);
-      return NextResponse.json({ error: '패키지 정보를 저장하지 못했습니다.' }, { status: 500 });
+      console.error('[POST /api/deployments] Supabase error', error);
+      return NextResponse.json({ error: 'Failed to persist package information.' }, { status: 500 });
     }
-
-    console.log('[POST /api/deployments] 저장 완료', { walletAddress, packageId: data?.package_id });
 
     return NextResponse.json({
       success: true,
       record: data,
     });
   } catch (error) {
-    console.error('[POST /api/deployments] 서버 오류', error);
-    return NextResponse.json({ error: '서버에서 예기치 못한 오류가 발생했습니다.' }, { status: 500 });
+    console.error('[POST /api/deployments] unexpected server error', error);
+    return NextResponse.json({ error: 'Unexpected server error occurred.' }, { status: 500 });
   }
 }

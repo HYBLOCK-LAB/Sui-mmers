@@ -39,9 +39,9 @@ export function MintSwimmerPanel({
     <Card className="border-sky-200">
       <CardHeader>
         <CardTitle className="text-lg">Mint Swimmer NFT</CardTitle>
-        <p className="text-sm text-gray-500">Deploy한 패키지로 새로운 Swimmer를 바로 만들어보세요.</p>
+        <p className="text-sm text-gray-500">Create a new Swimmer instantly using your deployed package.</p>
         {!packageReady ? (
-          <p className="text-xs text-amber-600">먼저 Move 패키지를 배포해야 민팅할 수 있어요.</p>
+          <p className="text-xs text-amber-600">Deploy your Move package before minting.</p>
         ) : (
           packageId && (
             <p className="text-xs text-gray-400 font-mono break-all">Package ID: {packageId}</p>

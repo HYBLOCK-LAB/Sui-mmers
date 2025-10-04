@@ -39,7 +39,7 @@ export function DeployContract({ onPackageDeployed }: DeployContractProps) {
         console.log('✅ Browser Move compiler ready')
       } catch (error) {
         console.error('Failed to initialize Move compiler:', error)
-        setErrorMessage('컴파일러 초기화 실패')
+        setErrorMessage('Failed to initialize compiler')
       } finally {
         setIsInitializing(false)
       }
@@ -54,14 +54,14 @@ export function DeployContract({ onPackageDeployed }: DeployContractProps) {
 
   const handleDeploy = async () => {
     if (!currentAccount) {
-      console.error('먼저 지갑을 연결해주세요!')
-      setErrorMessage('먼저 지갑을 연결해주세요!')
+      console.error('Please connect your wallet first!')
+      setErrorMessage('Please connect your wallet first!')
       return
     }
 
     if (!compilerReady) {
-      console.error('컴파일러가 아직 준비중입니다. 잠시 후 다시 시도해주세요.')
-      setErrorMessage('컴파일러가 아직 준비중입니다')
+      console.error('Compiler is not ready yet. Please try again shortly.')
+      setErrorMessage('Compiler is not ready yet')
       return
     }
 
@@ -138,15 +138,15 @@ export function DeployContract({ onPackageDeployed }: DeployContractProps) {
               // 부모 컴포넌트에 알림
               onPackageDeployed(newPackageId)
               
-              console.log(`✅ 스마트 컨트랙트가 성공적으로 배포되었습니다! 패키지 ID: ${newPackageId}`)
+              console.log(`✅ Smart contract deployed successfully! Package ID: ${newPackageId}`)
             } else {
-              throw new Error('패키지 ID를 추출할 수 없습니다')
+              throw new Error('Unable to extract package ID')
             }
           },
           onError: (error) => {
             console.error('Deploy transaction failed:', error)
             setDeployStatus('error')
-            setErrorMessage(error.message || '배포 실패')
+            setErrorMessage(error.message || 'Deployment failed')
           },
         }
       )
@@ -162,7 +162,7 @@ export function DeployContract({ onPackageDeployed }: DeployContractProps) {
   // 새로 추가: 사전 컴파일된 바이트코드로 배포
   const handleDeployPrecompiled = async () => {
     if (!currentAccount) {
-      setErrorMessage('먼저 지갑을 연결해주세요!')
+      setErrorMessage('Please connect your wallet first!')
       return
     }
 
@@ -222,13 +222,13 @@ export function DeployContract({ onPackageDeployed }: DeployContractProps) {
               onPackageDeployed(newPackageId)
             } else {
               setDeployStatus('error')
-              setErrorMessage('패키지 ID를 추출할 수 없습니다')
+              setErrorMessage('Unable to extract package ID')
             }
           },
           onError: (error) => {
             console.error('Precompiled deploy failed:', error)
             setDeployStatus('error')
-            setErrorMessage(error.message || '배포 실패')
+            setErrorMessage(error.message || 'Deployment failed')
           },
         }
       )
@@ -251,9 +251,9 @@ export function DeployContract({ onPackageDeployed }: DeployContractProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>1단계. 패키지 배포</CardTitle>
+        <CardTitle>Step 1. Deploy package</CardTitle>
         <CardDescription>
-          테스트넷에 Swimmer 패키지를 1회 배포하면, 이후에는 배포 없이 민팅만 진행합니다
+          Deploy the Swimmer package to testnet once; afterwards you can mint without redeploying.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -263,7 +263,7 @@ export function DeployContract({ onPackageDeployed }: DeployContractProps) {
           <div className="flex items-center">
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-3"></div>
             <span className="text-sm text-blue-700">
-              {isInitializing ? '브라우저 Move 컴파일러 초기화 중...' : '컴파일러 준비 대기중...'}
+              {isInitializing ? 'Initializing browser Move compiler...' : 'Waiting for compiler to be ready...'}
             </span>
           </div>
         </div>
@@ -272,8 +272,8 @@ export function DeployContract({ onPackageDeployed }: DeployContractProps) {
       {compilerReady && (
         <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
           <span className="text-sm text-green-700">
-            ✅ 브라우저 기반 Move 컴파일러 준비 완료! 
-            소스 코드를 직접 컴파일하여 배포할 수 있습니다.
+            ✅ Browser-based Move compiler is ready! 
+            You can compile and deploy source code directly.
           </span>
         </div>
       )}
@@ -281,9 +281,9 @@ export function DeployContract({ onPackageDeployed }: DeployContractProps) {
       {packageId ? (
         <div>
           <div className="bg-green-50 p-4 rounded-lg mb-4">
-            <p className="text-sm text-green-700 font-semibold">✅ 패키지 배포 완료 (한 번만 필요) </p>
+            <p className="text-sm text-green-700 font-semibold">✅ Package deployment complete (only needed once)</p>
             <p className="text-xs text-gray-600 mt-2">
-              패키지 ID: <span className="font-mono">{packageId}</span>
+              Package ID: <span className="font-mono">{packageId}</span>
             </p>
           </div>
           <Button
@@ -291,7 +291,7 @@ export function DeployContract({ onPackageDeployed }: DeployContractProps) {
             variant="outline"
             className="w-full"
           >
-            초기화하고 다시 배포하기
+            Reset and deploy again
           </Button>
         </div>
       ) : (
@@ -300,15 +300,15 @@ export function DeployContract({ onPackageDeployed }: DeployContractProps) {
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
               <p className="text-sm text-gray-600">
-                브라우저에서 Move 코드를 컴파일하고 배포중입니다...
+                Compiling and deploying Move code in the browser...
               </p>
             </div>
           ) : (
             <>
               <p className="text-sm text-gray-600 mb-4">
-                두 가지 방법 중 선택:
-                <br/>- 소스 코드를 브라우저에서 컴파일하여 배포
-                <br/>- 미리 컴파일된 바이트코드로 바로 배포 (권장)
+                Choose one of two methods:
+                <br/>- Compile and deploy the source code in the browser
+                <br/>- Deploy precompiled bytecode (recommended)
               </p>
               
               {errorMessage && (
@@ -323,7 +323,7 @@ export function DeployContract({ onPackageDeployed }: DeployContractProps) {
                   disabled={isDeploying || !currentAccount}
                   className="w-full"
                 >
-                  {isDeploying ? '배포 중...' : '미리 컴파일된 바이트코드로 배포'}
+                  {isDeploying ? 'Deploying...' : 'Deploy precompiled bytecode'}
                 </Button>
 
                 <Button
@@ -332,12 +332,12 @@ export function DeployContract({ onPackageDeployed }: DeployContractProps) {
                   variant="outline"
                   className="w-full"
                 >
-                  {isDeploying ? '배포 중...' : '브라우저에서 컴파일 후 배포'}
+                  {isDeploying ? 'Deploying...' : 'Compile in browser and deploy'}
                 </Button>
               </div>
               
               {!currentAccount && (
-                <p className="text-xs text-red-500 mt-2">지갑을 먼저 연결해주세요!</p>
+                <p className="text-xs text-red-500 mt-2">Please connect your wallet first!</p>
               )}
             </>
           )}

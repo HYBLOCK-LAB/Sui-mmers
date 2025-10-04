@@ -93,11 +93,11 @@ function GameplayContent() {
         } catch (error) {
           const message = (error as Error)?.message ?? String(error);
           if (!message.includes('Could not find the referenced transaction')) {
-            console.error('[Gameplay] digest 기반 패키지 조회 실패', error);
+            console.error('[Gameplay] failed to fetch package id by digest', error);
             return null;
           }
           console.warn(
-            `[Gameplay] 트랜잭션 정보를 아직 찾지 못했습니다. 재시도합니다... (시도 ${attempt + 1}/${maxAttempts})`
+            `[Gameplay] transaction not yet available, retrying... (attempt ${attempt + 1}/${maxAttempts})`
           );
         }
 
@@ -106,7 +106,7 @@ function GameplayContent() {
         }
       }
 
-      console.warn('[Gameplay] 모든 재시도 후에도 패키지 ID를 찾지 못했습니다.');
+      console.warn('[Gameplay] package id not found after all retries');
       return null;
     },
     []
@@ -116,27 +116,27 @@ function GameplayContent() {
   const mockSwimmers: SwimmerSummary[] = [
     {
       id: 'mock-swimmer-1',
-      name: '파란돌고래',
+      name: 'Blue Dolphin',
       species: 'Dolphin',
       distanceTraveled: 1250,
       baseSpeedPerHour: 50,
-      lastUpdateTimestampMs: Date.now() - 300000, // 5분 전
+      lastUpdateTimestampMs: Date.now() - 300000, // 5 minutes ago
     },
     {
       id: 'mock-swimmer-2',
-      name: '빨간상어',
+      name: 'Red Shark',
       species: 'Shark',
       distanceTraveled: 980,
       baseSpeedPerHour: 45,
-      lastUpdateTimestampMs: Date.now() - 600000, // 10분 전
+      lastUpdateTimestampMs: Date.now() - 600000, // 10 minutes ago
     },
     {
       id: 'mock-swimmer-3',
-      name: '노란거북이',
+      name: 'Yellow Turtle',
       species: 'Turtle',
       distanceTraveled: 750,
       baseSpeedPerHour: 30,
-      lastUpdateTimestampMs: Date.now() - 900000, // 15분 전
+      lastUpdateTimestampMs: Date.now() - 900000, // 15 minutes ago
     },
   ];
 
@@ -184,7 +184,7 @@ function GameplayContent() {
 
       if (!isMockMode && currentAccount?.address) {
         persistPackageToSupabase(currentAccount.address, id).catch((error) => {
-          console.error('[Gameplay] 패키지 저장 비동기 오류', error);
+          console.error('[Gameplay] async package persist error', error);
         });
       }
     },
@@ -194,7 +194,7 @@ function GameplayContent() {
   // 실제 모드 데이터 로드
   const fetchSwimmers = useCallback(async () => {
     if (isMockMode) {
-      console.log('🎭 Mock 모드: Swimmers 데이터 로드');
+      console.log('🎭 Mock mode: loading swimmers');
       setSwimmers(mockSwimmers);
       return;
     }
@@ -219,7 +219,7 @@ function GameplayContent() {
 
   const fetchTunaCans = useCallback(async () => {
     if (isMockMode) {
-      console.log('🎭 Mock 모드: TunaCans 데이터 로드');
+      console.log('🎭 Mock mode: loading tuna cans');
       setTunaCans(mockTunaCans);
       return;
     }
@@ -243,7 +243,7 @@ function GameplayContent() {
     if (!isMockMode) return;
 
     const interval = setInterval(() => {
-      console.log('🎭 Mock 모드: 자동 데이터 업데이트');
+      console.log('🎭 Mock mode: auto-updating data');
       // 실제 게임처럼 시간에 따른 거리 증가 시뮬레이션
       setSwimmers(prev => prev.map(swimmer => ({
         ...swimmer,
@@ -299,7 +299,7 @@ function GameplayContent() {
 
   const persistPackageToSupabase = useCallback(async (address: string, packageIdValue: string) => {
     try {
-      console.log('[Gameplay] Supabase 저장 시도', { address, packageId: packageIdValue });
+      console.log('[Gameplay] attempting to persist package', { address, packageId: packageIdValue });
       const response = await fetch('/api/deployments', {
         method: 'POST',
         headers: {
@@ -313,22 +313,22 @@ function GameplayContent() {
 
       if (!response.ok) {
         const message = await response.text();
-        console.warn('[Gameplay] 패키지 정보를 저장하지 못했습니다.', message);
+        console.warn('[Gameplay] failed to persist package', message);
       } else {
-        console.log('[Gameplay] Supabase 저장 성공');
+        console.log('[Gameplay] package persisted successfully');
       }
     } catch (error) {
-      console.error('[Gameplay] Supabase 패키지 저장 실패', error);
+      console.error('[Gameplay] package persist request failed', error);
     }
   }, []);
 
   const fetchPersistedPackage = useCallback(async (address: string) => {
     try {
-      console.log('[Gameplay] Supabase 패키지 조회 시도', { address });
+      console.log('[Gameplay] attempting to fetch package from Supabase', { address });
       const response = await fetch(`/api/deployments?walletAddress=${address}`);
       if (!response.ok) {
         const message = await response.text();
-        console.warn('[Gameplay] 패키지 정보를 불러오지 못했습니다.', message);
+        console.warn('[Gameplay] failed to fetch package info', message);
         return;
       }
 
@@ -338,10 +338,10 @@ function GameplayContent() {
         if (typeof window !== 'undefined') {
           window.localStorage.setItem('smr-package-id', storedPackageId);
         }
-        console.log('[Gameplay] Supabase 패키지 조회 성공', { storedPackageId });
+        console.log('[Gameplay] package fetched from Supabase', { storedPackageId });
       }
     } catch (error) {
-      console.error('[Gameplay] Supabase 패키지 조회 실패', error);
+      console.error('[Gameplay] error fetching package info from Supabase', error);
     }
   }, []);
 
@@ -360,13 +360,13 @@ function GameplayContent() {
 
   const handleCompileAndDeploy = async (transaction: any) => {
     if (isMockMode) {
-      console.log('🎭 Mock 모드: 컴파일 및 배포는 지원되지 않습니다');
-      alert('Mock 모드에서는 컴파일 기능을 사용할 수 없습니다.');
+      console.log('🎭 Mock mode: compile and deploy not supported');
+      alert('Compile and deploy are unavailable in mock mode.');
       return;
     }
 
     if (!currentAccount) {
-      alert('먼저 지갑을 연결해주세요!');
+      alert('Please connect your wallet first!');
       return;
     }
 
@@ -382,9 +382,7 @@ function GameplayContent() {
         },
         {
           onSuccess: async (result) => {
-            console.log('Transaction successful with full result:', result);
-            console.log('ObjectChanges:', result.objectChanges);
-            console.log('Effects:', result.effects);
+            console.log('[Gameplay] transaction succeeded', result);
 
             let deployedPackageId = extractPackageIdFromObjectChanges((result as any).objectChanges);
 
@@ -395,24 +393,24 @@ function GameplayContent() {
             if (deployedPackageId) {
               handlePackageDeployed(deployedPackageId);
               ApiMoveCompiler.persistDeploymentResult(transaction, deployedPackageId).catch((error) => {
-                console.error('[Gameplay] Supabase 저장 비동기 오류', error);
+                console.error('[Gameplay] async Supabase persist error', error);
               });
-              alert(`🚀 패키지가 성공적으로 배포되었습니다!\n\nPackage ID: ${deployedPackageId}`);
+            alert(`🚀 Package deployed successfully!\n\nPackage ID: ${deployedPackageId}`);
             } else {
-              console.log('Could not extract package ID from transaction result');
-              alert('🎉 트랜잭션이 성공했습니다! 하지만 패키지 ID 확인에 실패했습니다.');
+              console.log('[Gameplay] could not determine package id');
+              alert('🎉 Transaction succeeded! However, package ID could not be determined.');
             }
             fetchSwimmers();
           },
           onError: (error) => {
             console.error('Transaction failed:', error);
-            alert('트랜잭션 실패: ' + error.message);
+            alert('Transaction failed: ' + error.message);
           },
         }
       );
     } catch (error) {
       console.error('Failed to execute transaction:', error);
-      alert('트랜잭션 실행 실패: ' + (error as Error).message);
+      alert('Failed to execute transaction: ' + (error as Error).message);
     } finally {
       setIsDeploying(false);
     }
@@ -420,7 +418,7 @@ function GameplayContent() {
 
   const handleMintSwimmer = async (name: string, species: string) => {
     if (isMockMode) {
-      console.log('🎭 Mock 모드: Swimmer 민팅 시뮬레이션');
+      console.log('🎭 Mock mode: simulating swimmer mint');
       setIsMinting(true);
 
       setTimeout(() => {
@@ -429,20 +427,20 @@ function GameplayContent() {
           name,
           species,
           distanceTraveled: 0,
-          baseSpeedPerHour: Math.floor(Math.random() * 20) + 30, // 30-50 사이 랜덤
+          baseSpeedPerHour: Math.floor(Math.random() * 20) + 30, // 30-50 range
           lastUpdateTimestampMs: Date.now(),
         };
 
         setSwimmers(prev => [...prev, newSwimmer]);
         setSelectedSwimmerId(newSwimmer.id);
-        alert('🎉 새로운 Swimmer NFT가 도착했어요! (Mock 모드)');
+        alert('🎉 A new Swimmer NFT has arrived! (Mock mode)');
         setIsMinting(false);
       }, 1000);
       return;
     }
 
     if (!packageId) {
-      alert('먼저 스마트 컨트랙트를 배포해주세요!');
+      alert('Please deploy the smart contract first!');
       return;
     }
 
@@ -460,18 +458,18 @@ function GameplayContent() {
         },
         {
           onSuccess: () => {
-            alert('🎉 새로운 Swimmer NFT가 도착했어요!');
+            alert('🎉 A new Swimmer NFT has arrived!');
             fetchSwimmers();
           },
           onError: (error) => {
             console.error('Transaction failed:', error);
-            alert('트랜잭션 실패: ' + error.message);
+            alert('Transaction failed: ' + error.message);
           },
         }
       );
     } catch (error) {
       console.error('Failed to create swimmer:', error);
-      alert('수영 선수 생성 실패!');
+      alert('Failed to create swimmer!');
     } finally {
       setIsMinting(false);
     }
@@ -479,7 +477,7 @@ function GameplayContent() {
 
   const handleUpdateProgress = async () => {
     if (isMockMode) {
-      console.log('🎭 Mock 모드: Progress 업데이트 시뮬레이션');
+      console.log('🎭 Mock mode: simulating progress update');
       if (!selectedSwimmerId) return;
 
       setActionLoading('update');
@@ -488,8 +486,8 @@ function GameplayContent() {
         const selectedSwimmer = mockSwimmers.find(s => s.id === selectedSwimmerId);
         if (!selectedSwimmer) return;
 
-        // 시간에 따른 거리 증가 계산 (5분 = 300초)
-        const timeDiff = 300; // 5분
+        // Calculate distance based on elapsed time (5 minutes = 300 seconds)
+        const timeDiff = 300; // 5 minutes
         const distanceIncrease = (selectedSwimmer.baseSpeedPerHour * timeDiff) / 3600;
 
         setSwimmers(prev => prev.map(swimmer =>
@@ -502,24 +500,24 @@ function GameplayContent() {
             : swimmer
         ));
 
-        alert('⏱ Swimmer가 자동으로 앞으로 나아갔어요! (Mock 모드)');
+        alert('⏱ The swimmer advanced automatically! (Mock mode)');
         setActionLoading(null);
       }, 600);
       return;
     }
 
     if (!currentAccount) {
-      alert('먼저 지갑을 연결해주세요!');
+      alert('Please connect your wallet first!');
       return;
     }
 
     if (!packageId) {
-      alert('먼저 스마트 컨트랙트를 배포해주세요!');
+      alert('Please deploy the smart contract first!');
       return;
     }
 
     if (!selectedSwimmerId) {
-      alert('업데이트할 Swimmer를 선택해주세요!');
+      alert('Please select a swimmer to update!');
       return;
     }
 
@@ -537,27 +535,27 @@ function GameplayContent() {
         },
         {
           onSuccess: () => {
-            alert('⏱ Swimmer가 자동으로 앞으로 나아갔어요!');
+            alert('⏱ The swimmer advanced automatically!');
             fetchSwimmers();
             setActionLoading(null);
           },
           onError: (error) => {
             console.error('Update progress failed:', error);
-            alert('업데이트 실패: ' + error.message);
+            alert('Update failed: ' + error.message);
             setActionLoading(null);
           },
         }
       );
     } catch (error) {
       console.error('Failed to update progress:', error);
-      alert('업데이트 실패: ' + (error as Error).message);
+      alert('Update failed: ' + (error as Error).message);
       setActionLoading(null);
     }
   };
 
   const handleMintTuna = async () => {
     if (isMockMode) {
-      console.log('🎭 Mock 모드: TunaCan 민팅 시뮬레이션');
+      console.log('🎭 Mock mode: simulating TunaCan mint');
       setActionLoading('mintTuna');
 
       setTimeout(() => {
@@ -568,7 +566,7 @@ function GameplayContent() {
 
         setTunaCans(prev => [...prev, newTuna]);
         setSelectedTunaId(newTuna.id);
-        alert('🍣 새로운 TunaCan이 인벤토리에 추가됐어요! (Mock 모드)');
+        alert('🍣 A new TunaCan has been added to your inventory! (Mock mode)');
         setActionLoading(null);
       }, 800);
       return;
@@ -587,27 +585,27 @@ function GameplayContent() {
         },
         {
           onSuccess: () => {
-            alert('🍣 참치 통조림이 인벤토리에 추가되었어요!');
+            alert('🍣 A TunaCan has been added to your inventory!');
             fetchTunaCans();
             setActionLoading(null);
           },
           onError: (error) => {
             console.error('Mint tuna failed:', error);
-            alert('참치 민팅 실패: ' + error.message);
+            alert('Tuna mint failed: ' + error.message);
             setActionLoading(null);
           },
         }
       );
     } catch (error) {
       console.error('Failed to mint tuna:', error);
-      alert('참치 민팅 실패: ' + (error as Error).message);
+      alert('Tuna mint failed: ' + (error as Error).message);
       setActionLoading(null);
     }
   };
 
   const handleEatTuna = async () => {
     if (isMockMode) {
-      console.log('🎭 Mock 모드: TunaCan 먹이기 시뮬레이션');
+      console.log('🎭 Mock mode: simulating TunaCan feeding');
       if (!selectedSwimmerId || !selectedTunaId) return;
 
       setActionLoading('eatTuna');
@@ -634,29 +632,29 @@ function GameplayContent() {
           setSelectedTunaId('');
         }
 
-        alert('🍽 Swimmer가 TunaCan을 먹고 힘을 냅니다! (Mock 모드)');
+        alert('🍽 The swimmer ate a TunaCan and gained energy! (Mock mode)');
         setActionLoading(null);
       }, 1200);
       return;
     }
 
     if (!currentAccount) {
-      alert('먼저 지갑을 연결해주세요!');
+      alert('Please connect your wallet first!');
       return;
     }
 
     if (!packageId) {
-      alert('먼저 스마트 컨트랙트를 배포해주세요!');
+      alert('Please deploy the smart contract first!');
       return;
     }
 
     if (!selectedSwimmerId) {
-      alert('먹이를 줄 Swimmer를 선택해주세요!');
+      alert('Please select a swimmer to feed!');
       return;
     }
 
     if (!selectedTunaId) {
-      alert('먼저 참치 통조림을 준비해주세요!');
+      alert('Please mint a TunaCan first!');
       return;
     }
 
@@ -674,21 +672,21 @@ function GameplayContent() {
         },
         {
           onSuccess: () => {
-            alert('💪 참치 보너스로 거리가 증가했어요!');
+            alert('💪 Distance increased thanks to the TunaCan bonus!');
             fetchSwimmers();
             fetchTunaCans();
             setActionLoading(null);
           },
           onError: (error) => {
             console.error('Eat tuna failed:', error);
-            alert('먹이 주기 실패: ' + error.message);
+            alert('Feeding failed: ' + error.message);
             setActionLoading(null);
           },
         }
       );
     } catch (error) {
       console.error('Failed to eat tuna:', error);
-      alert('먹이 주기 실패: ' + (error as Error).message);
+      alert('Feeding failed: ' + (error as Error).message);
       setActionLoading(null);
     }
   };
@@ -702,14 +700,14 @@ function GameplayContent() {
       <div className="bg-white/80 border border-gray-200 rounded-xl p-6 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">테스트 모드 선택</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Select Test Mode</h3>
             <p className="text-sm text-gray-600 mt-1">
-              Mock 모드에서는 실제 블록체인 연결 없이 게임 기능을 테스트할 수 있습니다.
+              In mock mode you can test gameplay features without connecting to the blockchain.
             </p>
           </div>
           <div className="flex items-center gap-4">
             <span className={`text-sm font-medium ${isMockMode ? 'text-purple-600' : 'text-gray-400'}`}>
-              🎭 Mock 모드
+              🎭 Mock Mode
             </span>
             <button
               onClick={() => setIsMockMode(!isMockMode)}
@@ -724,7 +722,7 @@ function GameplayContent() {
               />
             </button>
             <span className={`text-sm font-medium ${!isMockMode ? 'text-blue-600' : 'text-gray-400'}`}>
-              🔗 실제 블록체인
+              🔗 Live Blockchain
             </span>
           </div>
         </div>
@@ -736,8 +734,8 @@ function GameplayContent() {
           <div className="flex items-center justify-center gap-2">
             <span className="text-2xl">🎭</span>
             <div>
-              <h3 className="font-bold text-lg">Mock 테스트 모드</h3>
-              <p className="text-sm opacity-90">실제 블록체인 연결 없이 게임 기능을 테스트할 수 있습니다</p>
+              <h3 className="font-bold text-lg">Mock Test Mode</h3>
+              <p className="text-sm opacity-90">Test gameplay features without connecting to the blockchain.</p>
             </div>
           </div>
         </div>
@@ -748,18 +746,18 @@ function GameplayContent() {
           <div>
             <p className="text-sm font-semibold text-purple-600">🎮 Gameplay Console</p>
             <h1 className="text-3xl font-bold text-gray-900">
-              {isMockMode ? 'Mock 모드: Swimmer 관리' : 'Swimmer와 상호작용하기'}
+              {isMockMode ? 'Mock Mode: Manage Swimmers' : 'Interact with Swimmers'}
             </h1>
             <p className="mt-1 text-sm text-gray-600">
               {isMockMode
-                ? '실제 블록체인 연결 없이 모든 게임 기능을 테스트해보세요.'
-                : '자동 전진과 아이템 소비를 Programmable Transaction Block으로 안전하게 조합해 보세요.'
+                ? 'Try every gameplay feature without touching the blockchain.'
+                : 'Combine auto-progress and item usage safely with programmable transaction blocks.'
               }
             </p>
           </div>
           <div className="flex items-center gap-3">
             <Button variant="outline" className="lg:hidden">
-              📘 코스 열람
+              📘 View Course
             </Button>
             {/* 지갑 상태 표시 */}
             <div className={`border rounded-lg px-4 py-2 ${
@@ -771,12 +769,12 @@ function GameplayContent() {
                 </span>
                 <div className="text-sm">
                   <div className={`font-medium ${currentAccount ? 'text-green-800' : 'text-gray-800'}`}>
-                    {isMockMode ? 'Mock 지갑 연결됨' : (currentAccount ? '지갑 연결됨' : '지갑 미연결')}
+                    {isMockMode ? 'Mock wallet connected' : (currentAccount ? 'Wallet connected' : 'Wallet not connected')}
                   </div>
                   <div className={`font-mono ${currentAccount ? 'text-green-600' : 'text-gray-600'}`}>
                     {currentAccount?.address
                       ? `${currentAccount.address.slice(0, 6)}...${currentAccount.address.slice(-4)}`
-                      : '연결 필요'
+                      : 'Connection required'
                     }
                   </div>
                 </div>
@@ -791,22 +789,22 @@ function GameplayContent() {
         <section className="grid gap-6 md:grid-cols-3">
           <div className="rounded-xl border border-blue-100 bg-blue-50/80 px-5 py-4">
             <p className="text-xs uppercase text-blue-600 font-semibold">
-              {isMockMode ? 'Mock 지갑' : '연결된 지갑'}
+              {isMockMode ? 'Mock Wallet' : 'Connected Wallet'}
             </p>
             <p className="mt-2 text-sm font-mono text-gray-800">
               {currentAccount?.address
                 ? `${currentAccount.address.slice(0, 6)}...${currentAccount.address.slice(-4)}`
-                : '지갑 미연결'}
+                : 'Wallet not connected'}
             </p>
           </div>
           <div className="rounded-xl border border-emerald-100 bg-emerald-50/80 px-5 py-4">
-            <p className="text-xs uppercase text-emerald-600 font-semibold">보유한 Swimmer</p>
+            <p className="text-xs uppercase text-emerald-600 font-semibold">Swimmers Owned</p>
             <p className="mt-2 text-2xl font-bold text-emerald-700">{swimmers.length}</p>
           </div>
           <div className="rounded-xl border border-purple-100 bg-purple-50/80 px-5 py-4">
-            <p className="text-xs uppercase text-purple-600 font-semibold">패키지 상태</p>
+            <p className="text-xs uppercase text-purple-600 font-semibold">Package Status</p>
             <p className="mt-2 text-sm text-gray-800">
-              {isMockMode ? '✅ Mock 모드: 준비 완료' : (packageId ? '✅ 준비 완료' : '배포 필요')}
+              {isMockMode ? '✅ Mock mode: ready' : (packageId ? '✅ Ready' : 'Deployment required')}
             </p>
             {packageId && <p className="mt-1 text-xs font-mono text-gray-500 break-all">{packageId}</p>}
           </div>
@@ -849,15 +847,15 @@ function GameplayContent() {
               <div className="flex items-center gap-3 mb-4">
                 <span className="text-2xl">📦</span>
                 <div>
-                  <h3 className="text-lg font-semibold text-green-800">컨트랙트 배포</h3>
-                  <p className="text-sm text-green-600">Mock 모드에서는 이미 배포된 상태입니다</p>
+                  <h3 className="text-lg font-semibold text-green-800">Contract Deployment</h3>
+                  <p className="text-sm text-green-600">Already deployed in mock mode.</p>
                 </div>
               </div>
               <div className="bg-green-100/80 border border-green-300 rounded-lg p-4">
                 <div className="flex items-center gap-2">
                   <span className="text-green-600">✅</span>
                   <div>
-                    <div className="font-medium text-green-800">배포 완료</div>
+                    <div className="font-medium text-green-800">Deployment complete</div>
                     <div className="text-sm text-green-600">Package ID: {packageId ?? 'mock-package'}</div>
                   </div>
                 </div>
@@ -878,9 +876,9 @@ function GameplayContent() {
         {/* 수영장 & 게임 콘솔 */}
         <section className="bg-white/80 border border-gray-200 rounded-xl p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">🏊 수영장 & 게임 콘솔</h2>
+            <h2 className="text-lg font-semibold text-gray-900">🏊 Swimming Pool & Game Console</h2>
             <span className="text-xs text-gray-500">
-              {isMockMode ? 'Mock 모드에서' : '실시간으로'} Swimmer를 조작하고 관전하세요
+              {isMockMode ? 'Control swimmers in mock mode.' : 'Control swimmers live on-chain.'}
             </span>
           </div>
           <div className="h-auto">
