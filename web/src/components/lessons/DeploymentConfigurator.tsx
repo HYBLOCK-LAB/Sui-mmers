@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { LessonDescription } from '@/components/LessonDescription';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { MintSwimmerPanel } from '@/components/lessons/MintSwimmerPanel';
 import { DEFAULT_VALUES } from '@/src/contracts/moveTemplates';
 
 const START_LOCATIONS = [
@@ -160,9 +161,23 @@ interface DeploymentConfiguratorProps {
   onConfigChange: (updates: Partial<DeploymentConfig>) => void;
   lessonSlug?: string;
   chapterSlug?: string;
+  onMint?: (name: string, species: string) => void | Promise<void>;
+  isMinting?: boolean;
+  mintDisabled?: boolean;
+  packageId?: string | null;
 }
 
-export function DeploymentConfigurator({ markdown, config, onConfigChange, lessonSlug, chapterSlug }: DeploymentConfiguratorProps) {
+export function DeploymentConfigurator({
+  markdown,
+  config,
+  onConfigChange,
+  lessonSlug,
+  chapterSlug,
+  onMint,
+  isMinting,
+  mintDisabled,
+  packageId,
+}: DeploymentConfiguratorProps) {
   const currentLocationLabel = useMemo(() => getLocationLabel(config.startingLocation), [config.startingLocation]);
 
   const updateConfig = (updates: Partial<DeploymentConfig>) => {
@@ -306,6 +321,15 @@ export function DeploymentConfigurator({ markdown, config, onConfigChange, lesso
           )}
         </CardContent>
       </Card>
+           {onMint && (
+        <MintSwimmerPanel
+          onMint={onMint}
+          isMinting={isMinting}
+          disabled={mintDisabled}
+          packageId={packageId}
+          resetKey={`${lessonSlug ?? ''}-${chapterSlug ?? ''}`}
+        />
+      )}
     </div>
   );
 }
@@ -320,82 +344,83 @@ export function DeploymentPreview({ config, lessonSlug, chapterSlug }: Deploymen
   const locationLabel = useMemo(() => getLocationLabel(config.startingLocation), [config.startingLocation]);
 
   const [swimFrame, setSwimFrame] = useState(0);
-  const swimImages = ['mint_water(1).png', 'mint_water(2).png', 'mint_water(3).png', 'mint_water(2).png'];
   const [recoloredImages, setRecoloredImages] = useState<Map<string, string>>(new Map());
   const animationRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    // 200ms 간격으로 애니메이션 프레임 변경
     animationRef.current = setInterval(() => {
-      setSwimFrame(prev => prev + 1)
-    }, 200)
+    setSwimFrame((prev) => prev + 1);
+    }, 200);
 
     return () => {
       if (animationRef.current) {
-        clearInterval(animationRef.current)
+        clearInterval(animationRef.current);
       }
-    }
-  }, [])
+    };
+  }, []);
 
   // 색상 변경 시 모든 애니메이션 프레임 이미지 재생성
   useEffect(() => {
-    const loadAndRecolorAllFrames = async () => {
-      const hue = hexToHue(config.swimmerColor)
-      const tunaHue = config.color ? hexToHue(config.color) : 0
-      const newImages = new Map(recoloredImages)
-      
-      // 각 프레임에 대해 색상 재적용
-      for (const frame of [1, 2, 3]) {
-        const img = new Image()
-        img.onload = () => {
-          const recoloredDataUrl = recolorImageByHue(img, hue, 148, 151)
-          if (recoloredDataUrl) {
-            newImages.set(`swimmer-frame-${frame}`, recoloredDataUrl)
-            setRecoloredImages(new Map(newImages))
-          }
-        }
-        img.src = `/images/mint_water(${frame}).png`
-      }
+    let cancelled = false;
+    const hue = hexToHue(config.swimmerColor);
+    const tunaHue = config.color ? hexToHue(config.color) : undefined;
 
-      // tuna can 색상 변경
-      if (config.color) {
-        const tunaImg = new Image()
-        tunaImg.onload = () => {
-          const recoloredTuna = recolorImageByHue(tunaImg, tunaHue, 196, 199)
-          if (recoloredTuna) {
-            newImages.set('tuna-can', recoloredTuna)
-            setRecoloredImages(new Map(newImages))
-          }
-        }
-        tunaImg.src = '/images/tuna_can.png'
-      }
+    const updateImage = (key: string, src: string, sourceHueRange: [number, number], targetHue: number) => {
+      const img = new Image();
+      img.onload = () => {
+        if (cancelled) return;
+        const recolored = recolorImageByHue(img, targetHue, sourceHueRange[0], sourceHueRange[1]);
+        if (recolored) {
+          setRecoloredImages((prev) => {
+            const next = new Map(prev);
+            next.set(key, recolored);
+            return next;
+          });
+        };
+        img.src = src;
+      };
     }
 
-    loadAndRecolorAllFrames()
-  }, [config.swimmerColor, config.color])
+  [1, 2, 3].forEach((frame) => {
+    updateImage(`swimmer-frame-${frame}`, `/images/mint_water(${frame}).png`, [148, 151], hue);
+  });
 
-  const currentSwimImage = recoloredImages.get(`swimmer-frame-${[1, 2, 3, 2][swimFrame % 4]}`) || `/images/mint_water(${[1, 2, 3, 2][swimFrame % 4]}).png`
+  if (tunaHue !== undefined) {
+        updateImage('tuna-can', '/images/tuna_can.png', [196, 199], tunaHue);
+      } else {
+        setRecoloredImages((prev) => {
+          if (!prev.has('tuna-can')) {
+            return prev;
+          }
+          const next = new Map(prev);
+          next.delete('tuna-can');
+          return next;
+        });
+      }
 
+    return () => {
+      cancelled = true;
+    };
+  }, [config.swimmerColor, config.color]);
   const isTunaChapter = lessonSlug === 'ptb-and-items' && chapterSlug === 'deploy-tuna';
-
+  
+  const frameSequence = [1, 2, 3, 2];
+  const frameIndex = frameSequence[swimFrame % frameSequence.length];
+  const currentSwimImage =
+    recoloredImages.get(`swimmer-frame-${frameIndex}`) || `/images/mint_water(${frameIndex}).png`;
   return (
     <Card className="border-sky-200">
       <CardHeader>
         <CardTitle className="text-lg">Deployment Preview</CardTitle>
-        <p className="text-sm text-gray-500">Confirm the configuration you will carry into the blockchain.</p>
+         <p className="text-sm text-gray-500">Confirm the configuration you will carry into the blockchain.</p>
       </CardHeader>
-      <CardContent className="space-y-3 text-sm">
+      <CardContent className="space-y-4 text-sm">
         <div className="flex justify-center">
-          {!isTunaChapter && (
-            <div className="relative w-[400px] h-[400px]">
-              <img
-                src={currentSwimImage}
-                alt="Swimmer"
-                className="w-[400px] h-[400px] object-contain"
-              />
+           {!isTunaChapter ? (
+            <div className="relative h-[320px] w-[320px] sm:h-[360px] sm:w-[360px]">
+              <img src={currentSwimImage} alt="Swimmer" className="h-full w-full object-contain" />
             </div>
-          )}
-          {isTunaChapter && (
+        ) : (
             <div className="relative w-[550px] h-[550px]">
               <img
                 src={recoloredImages.get('tuna-can') || '/images/tuna_can.png'}
@@ -404,6 +429,24 @@ export function DeploymentPreview({ config, lessonSlug, chapterSlug }: Deploymen
               />
             </div>
           )}
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 text-gray-600">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-gray-500">Launch Pad</p>
+            <p className="font-medium text-gray-900">{locationLabel}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-gray-500">Base Speed</p>
+            <p className="font-medium text-gray-900">{config.baseSpeed} m/hour</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-gray-500">Starting Distance</p>
+            <p className="font-medium text-gray-900">{config.startingDistance} m</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-gray-500">Sprint Bonus</p>
+            <p className="font-medium text-gray-900">+{config.sprintBonus} m</p>
+          </div>
         </div>
       </CardContent>
     </Card>

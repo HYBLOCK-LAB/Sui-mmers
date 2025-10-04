@@ -9,6 +9,7 @@ import { WalletConnect } from '@/components/WalletConnect';
 import { SwimmingPool } from '@/components/SwimmingPool';
 import { DeployContract } from '@/components/DeployContract';
 import { CodeEditor } from '@/components/CodeEditor';
+import { MintSwimmerPanel } from '@/components/lessons/MintSwimmerPanel';
 import { Button } from '@/components/ui/button';
 import { SuiService, CLOCK_OBJECT_ID } from '@/lib/services/suiService';
 import { SwimmerSummary, TunaCanItem } from '@/lib/types/swimmer';
@@ -43,7 +44,8 @@ function GameplayContent() {
   const [swimmers, setSwimmers] = useState<SwimmerSummary[]>([]);
   const [tunaCans, setTunaCans] = useState<TunaCanItem[]>([]);
   const [packageId, setPackageId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isDeploying, setIsDeploying] = useState(false);
+  const [isMinting, setIsMinting] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [selectedSwimmerId, setSelectedSwimmerId] = useState('');
   const [selectedTunaId, setSelectedTunaId] = useState('');
@@ -236,7 +238,7 @@ function GameplayContent() {
       return;
     }
 
-    setIsLoading(true);
+    setIsDeploying(true);
     try {
       signAndExecute(
         { 
@@ -309,30 +311,14 @@ function GameplayContent() {
       console.error('Failed to execute transaction:', error);
       alert('트랜잭션 실행 실패: ' + (error as Error).message);
     } finally {
-      setIsLoading(false);
+      setIsDeploying(false);
     }
-  };
-
-  const handleMintFromTemplate = async () => {
-    if (!currentAccount && !isMockMode) {
-      alert('먼저 지갑을 연결해주세요!');
-      return;
-    }
-
-    if (!packageId) {
-      alert('먼저 스마트 컨트랙트를 배포해주세요!');
-      return;
-    }
-
-    const name = 'Template Swimmer';
-    const species = 'Template Species';
-    await handleMintSwimmer(name, species);
   };
 
   const handleMintSwimmer = async (name: string, species: string) => {
     if (isMockMode) {
       console.log('🎭 Mock 모드: Swimmer 민팅 시뮬레이션');
-      setIsLoading(true);
+      setIsMinting(true);
 
       setTimeout(() => {
         const newSwimmer: SwimmerSummary = {
@@ -347,11 +333,17 @@ function GameplayContent() {
         setSwimmers(prev => [...prev, newSwimmer]);
         setSelectedSwimmerId(newSwimmer.id);
         alert('🎉 새로운 Swimmer NFT가 도착했어요! (Mock 모드)');
-        setIsLoading(false);
+        setIsMinting(false);
       }, 1000);
       return;
     }
 
+    if (!packageId) {
+      alert('먼저 스마트 컨트랙트를 배포해주세요!');
+      return;
+    }
+
+    setIsMinting(true);
     try {
       const tx = new Transaction();
       tx.moveCall({
@@ -378,7 +370,7 @@ function GameplayContent() {
       console.error('Failed to create swimmer:', error);
       alert('수영 선수 생성 실패!');
     } finally {
-      setIsLoading(false);
+      setIsMinting(false);
     }
   };
 
@@ -721,35 +713,55 @@ function GameplayContent() {
         {!isMockMode && (
           <section className="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-6">
             <DeployContract onPackageDeployed={setPackageId} />
-            <CodeEditor 
-              onCompileAndDeploy={handleCompileAndDeploy}
-              onMint={handleMintFromTemplate}
-              disabled={!currentAccount || isLoading}
-              codeTemplate={ApiMoveCompiler.getAdvancedSwimmerTemplate()}
-              senderAddress={currentAccount?.address}
-            />
+            <div className="space-y-4">
+              <CodeEditor
+                onCompileAndDeploy={handleCompileAndDeploy}
+                disabled={!currentAccount || isDeploying || isMinting}
+                codeTemplate={ApiMoveCompiler.getAdvancedSwimmerTemplate()}
+                senderAddress={currentAccount?.address}
+              />
+              <MintSwimmerPanel
+                onMint={handleMintSwimmer}
+                isMinting={isMinting}
+                disabled={!currentAccount || isDeploying}
+                packageId={packageId}
+                defaultName="Template Swimmer"
+                defaultSpecies="Template Species"
+                resetKey={packageId ?? 'no-package'}
+              />
+            </div>
           </section>
         )}
 
-        {/* Mock 모드 배포 상태 표시 */}
         {isMockMode && (
-          <section className="bg-green-50/80 border border-green-200 rounded-xl p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <span className="text-2xl">📦</span>
-              <div>
-                <h3 className="text-lg font-semibold text-green-800">컨트랙트 배포</h3>
-                <p className="text-sm text-green-600">Mock 모드에서는 이미 배포된 상태입니다</p>
-              </div>
-            </div>
-            <div className="bg-green-100/80 border border-green-300 rounded-lg p-4">
-              <div className="flex items-center gap-2">
-                <span className="text-green-600">✅</span>
+          <section className="grid grid-cols-1 gap-6 lg:grid-cols-[1.1fr_1fr]">
+            <div className="bg-green-50/80 border border-green-200 rounded-xl p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-2xl">📦</span>
                 <div>
-                  <div className="font-medium text-green-800">배포 완료</div>
-                  <div className="text-sm text-green-600">Package ID: {packageId}</div>
+                  <h3 className="text-lg font-semibold text-green-800">컨트랙트 배포</h3>
+                  <p className="text-sm text-green-600">Mock 모드에서는 이미 배포된 상태입니다</p>
+                </div>
+              </div>
+              <div className="bg-green-100/80 border border-green-300 rounded-lg p-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-green-600">✅</span>
+                  <div>
+                    <div className="font-medium text-green-800">배포 완료</div>
+                    <div className="text-sm text-green-600">Package ID: {packageId ?? 'mock-package'}</div>
+                  </div>
                 </div>
               </div>
             </div>
+            <MintSwimmerPanel
+              onMint={handleMintSwimmer}
+              isMinting={isMinting}
+              disabled={false}
+              packageId={packageId ?? 'mock-package'}
+              defaultName="Mock Swimmer"
+              defaultSpecies="Mock Species"
+              resetKey="mock-mode"
+            />
           </section>
         )}
 

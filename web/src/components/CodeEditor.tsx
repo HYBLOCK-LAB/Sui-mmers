@@ -21,7 +21,6 @@ const DiffEditor = dynamic(() => import('@monaco-editor/react').then((mod) => mo
 });
 
 interface CodeEditorProps {
-  onMint?: (name: string, species: string) => void | Promise<void>;
   onCompileAndDeploy?: (transaction: any) => void | Promise<void>;
   disabled?: boolean;
   codeTemplate?: string;
@@ -109,7 +108,6 @@ const createHintPlaceholder = (line: string): string => {
 };
 
 export function CodeEditor({
-  onMint,
   onCompileAndDeploy,
   disabled,
   codeTemplate,
@@ -118,8 +116,6 @@ export function CodeEditor({
   senderAddress,
 }: CodeEditorProps) {
   const [isDeploying, setIsDeploying] = useState(false);
-  const [name] = useState('My Swimmer');
-  const [species] = useState('Pacific Orca');
   const [baseSpeed] = useState(DEFAULT_VALUES.baseSpeedPerHour);
   const [tunaBonus] = useState(DEFAULT_VALUES.tunaBonus);
 
@@ -234,43 +230,19 @@ export function CodeEditor({
   };
 
   const handleDeploy = async () => {
-    setIsDeploying(true);
-    try {
-      // If onCompileAndDeploy is provided, use compilation flow
-      if (onCompileAndDeploy && senderAddress) {
-        const currentCode = editorRef.current?.getValue() || solutionCode;
-        const transaction = await ApiMoveCompiler.createDeployTransaction('swimmer', currentCode, senderAddress);
-        await onCompileAndDeploy(transaction);
-      } else if (onCompileAndDeploy) {
-        throw new Error('Sender address is required for deployment');
-      }
-      // Fallback to old mint flow
-      else if (onMint) {
-        await onMint(name, species);
-      }
-    } catch (error) {
-      console.error('Deploy failed:', error);
-    } finally {
-      setIsDeploying(false);
+    if (!onCompileAndDeploy) {
+      return;
     }
-  };
 
-  const handleMint = async () => {
     setIsDeploying(true);
     try {
-      // If onCompileAndDeploy is provided, use compilation flow
-      if (onCompileAndDeploy && senderAddress) {
-        console.log('Compiling Move code with sender:', senderAddress);
-        const currentCode = editorRef.current?.getValue() || solutionCode;
-        const transaction = await ApiMoveCompiler.createDeployTransaction('swimmer', currentCode, senderAddress);
-        await onCompileAndDeploy(transaction);
-      } else if (onCompileAndDeploy) {
+      if (!senderAddress) {
         throw new Error('Sender address is required for deployment');
       }
-      // Fallback to old mint flow
-      else if (onMint) {
-        await onMint(name, species);
-      }
+
+      const currentCode = editorRef.current?.getValue() || solutionCode;
+      const transaction = await ApiMoveCompiler.createDeployTransaction('swimmer', currentCode, senderAddress);
+      await onCompileAndDeploy(transaction);
     } catch (error) {
       console.error('Deploy failed:', error);
     } finally {
@@ -430,14 +402,9 @@ export function CodeEditor({
         </CardFooter>
       ) : (
         <CardFooter className="justify-between gap-2">
-          {handleDeploy && (
+          {onCompileAndDeploy && (
             <Button onClick={handleDeploy} disabled={disabled || isDeploying} size="lg" className="w-full">
-              {isDeploying ? 'Processing...' : onCompileAndDeploy ? 'Compile & Deploy' : 'Mint Swimmer from Template'}
-            </Button>
-          )}
-          {handleDeploy && (
-            <Button onClick={handleDeploy} disabled={disabled || isDeploying} size="lg" className="w-full">
-              {isDeploying ? 'Processing...' : onMint ? 'Mint' : 'Mint Swimmer from Template'}
+              {isDeploying ? 'Processing...' : 'Compile & Deploy'}
             </Button>
           )}
         </CardFooter>

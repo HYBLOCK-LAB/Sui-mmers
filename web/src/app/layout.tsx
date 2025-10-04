@@ -19,8 +19,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <main className="flex-1 flex flex-col">
             {children}
           </main>
-          <footer className="px-4 sm:px-6 lg:px-10 pb-6">
-            <div className="mx-auto max-w-6xl rounded-3xl border border-web3-100/40 bg-white/92 px-4 py-3 text-center text-xs sm:text-sm text-web3-700 shadow-sm">
+          <footer className="w-full px-0 pb-6">
+            <div className="w-full border-t border-web3-100/40 bg-white/92 px-4 py-3 text-center text-xs sm:text-sm text-web3-700">
               <p>Made with care for Sui-mmers - Keep swimming forward!</p>
               <p>© 2025 HYBLOCK. All Rights Reserved.</p>
             </div>

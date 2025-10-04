@@ -59,7 +59,8 @@ export function LessonPageClient({
   const { setActive } = useLessonNavigation();
   const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>('code');
   const [deploymentConfig, setDeploymentConfig] = useState<DeploymentConfig>(() => createDefaultDeploymentConfig());
-  const [isLoading, setIsLoading] = useState(false);
+  const [isDeploying, setIsDeploying] = useState(false);
+  const [isMinting, setIsMinting] = useState(false);
   const currentAccount = useCurrentAccount();
   const [packageId, setPackageId] = useState<string | null>(null);
   const { mutate: signAndExecute } = useSignAndExecuteTransaction();
@@ -103,7 +104,7 @@ export function LessonPageClient({
       return;
     }
 
-    setIsLoading(true);
+    setIsDeploying(true);
     try {
       signAndExecute(
         {
@@ -175,7 +176,7 @@ export function LessonPageClient({
       console.error('Failed to execute transaction:', error);
       alert('트랜잭션 실행 실패: ' + (error as Error).message);
     } finally {
-      setIsLoading(false);
+      setIsDeploying(false);
     }
   };
 
@@ -187,6 +188,12 @@ export function LessonPageClient({
   }, []);
 
   const handleMintSwimmer = async (name: string, species: string) => {
+    if (!packageId) {
+      alert('먼저 스마트 컨트랙트를 배포해주세요!');
+      return;
+    }
+
+    setIsMinting(true);
     try {
       const tx = new Transaction();
       tx.moveCall({
@@ -212,7 +219,7 @@ export function LessonPageClient({
       console.error('Failed to create swimmer:', error);
       alert('수영 선수 생성 실패!');
     } finally {
-      setIsLoading(false);
+      setIsMinting(false);
     }
   };
 
@@ -233,6 +240,10 @@ export function LessonPageClient({
               onConfigChange={handleConfigChange}
               lessonSlug={lessonSlug}
               chapterSlug={chapterSlug}
+              onMint={handleMintSwimmer}
+              isMinting={isMinting}
+              mintDisabled={!currentAccount || !packageId || isDeploying}
+              packageId={packageId}
             />
             <div className="space-y-4 self-start">
               <div className="flex items-center gap-2">
@@ -247,9 +258,8 @@ export function LessonPageClient({
                 <CodeEditor
                   codeTemplate={codeTemplate}
                   readOnly={effectiveReadOnly}
-                  onMint={handleMintSwimmer}
                   onCompileAndDeploy={handleCompileAndDeploy}
-                  disabled={!currentAccount || isLoading}
+                  disabled={!currentAccount || isDeploying || isMinting}
                   senderAddress={currentAccount?.address}
                 />
               ) : (
