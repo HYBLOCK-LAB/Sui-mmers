@@ -27,6 +27,10 @@ interface CodeEditorProps {
   codeSkeletone?: string;
   readOnly?: boolean;
   senderAddress?: string;
+  deploymentMetadata?: {
+    walletAddress: string;
+    lessonSlug?: string;
+  };
 }
 
 const FALLBACK_TEMPLATE = `module swimming::example {
@@ -114,6 +118,7 @@ export function CodeEditor({
   codeSkeletone,
   readOnly = false,
   senderAddress,
+  deploymentMetadata,
 }: CodeEditorProps) {
   const [isDeploying, setIsDeploying] = useState(false);
   const [baseSpeed] = useState(DEFAULT_VALUES.baseSpeedPerHour);
@@ -241,7 +246,9 @@ export function CodeEditor({
       }
 
       const currentCode = editorRef.current?.getValue() || solutionCode;
-      const transaction = await ApiMoveCompiler.createDeployTransaction('swimmer', currentCode, senderAddress);
+      const transaction = await ApiMoveCompiler.createDeployTransaction('swimmer', currentCode, senderAddress, {
+        persist: deploymentMetadata,
+      });
       await onCompileAndDeploy(transaction);
     } catch (error) {
       console.error('Deploy failed:', error);

@@ -16,6 +16,8 @@ import {
 import type { DeploymentConfig } from '@/components/lessons/DeploymentConfigurator';
 import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
 import { CLOCK_OBJECT_ID } from '@/lib/services/suiService';
+import { ApiMoveCompiler } from '@/lib/services/apiMoveCompiler';
+import { SuiClient, getFullnodeUrl } from '@mysten/sui/client';
 
 interface LessonPageClientProps {
   lessonSlug: string;
@@ -80,6 +82,40 @@ export function LessonPageClient({
     }
   }, [lessonSlug, chapterSlug, isDeploymentChapter]);
 
+  const fetchPersistedPackage = useCallback(
+    async (address: string) => {
+      try {
+        console.log('[LessonPageClient] Supabase 패키지 조회 시도', { address });
+        const response = await fetch(`/api/deployments?walletAddress=${address}`);
+        if (!response.ok) {
+          const message = await response.text();
+          console.warn('[LessonPageClient] 패키지 정보를 불러오지 못했습니다.', message);
+          return;
+        }
+
+        const { packageId: storedPackageId } = await response.json();
+        if (storedPackageId) {
+          setPackageId(storedPackageId);
+          if (typeof window !== 'undefined') {
+            window.localStorage.setItem('smr-package-id', storedPackageId);
+          }
+          console.log('[LessonPageClient] Supabase 패키지 조회 성공', { storedPackageId });
+        }
+      } catch (error) {
+        console.error('[LessonPageClient] Supabase 패키지 조회 실패', error);
+      }
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (!currentAccount?.address) {
+      return;
+    }
+
+    fetchPersistedPackage(currentAccount.address);
+  }, [currentAccount?.address, fetchPersistedPackage]);
+
   const handleConfigChange = (updates: Partial<DeploymentConfig>) => {
     setDeploymentConfig((prev) => ({ ...prev, ...updates }));
   };
@@ -98,6 +134,67 @@ export function LessonPageClient({
         : 'border-transparent text-gray-500 bg-gray-100 hover:bg-gray-200 hover:text-gray-700'
     }`;
 
+  const extractPackageIdFromObjectChanges = (objectChanges: any[] | undefined | null): string | null => {
+    if (!objectChanges) return null;
+    for (const change of objectChanges) {
+      if (change?.type === 'published' && change?.packageId) {
+        return change.packageId;
+      }
+    }
+    return null;
+  };
+
+  const fetchPackageIdByDigest = useCallback(
+    async (digest: string | undefined | null) => {
+      if (!digest) return null;
+      const network = process.env.NEXT_PUBLIC_SUI_NETWORK ?? 'testnet';
+      const client = new SuiClient({ url: getFullnodeUrl(network) });
+      const maxAttempts = 5;
+      const retryDelayMs = 1000;
+
+      for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+        try {
+          const txResult = await client.getTransactionBlock({
+            digest,
+            options: {
+              showObjectChanges: true,
+              showEffects: true,
+            },
+          });
+
+          const fromObjectChanges = extractPackageIdFromObjectChanges(txResult.objectChanges as any[]);
+          if (fromObjectChanges) {
+            return fromObjectChanges;
+          }
+
+          const created = txResult.effects?.created ?? [];
+          for (const item of created as any[]) {
+            if (item?.owner && typeof item.owner === 'object' && 'Immutable' in item.owner) {
+              return item.reference?.objectId ?? null;
+            }
+          }
+        } catch (error) {
+          const message = (error as Error)?.message ?? String(error);
+          if (!message.includes('Could not find the referenced transaction')) {
+            console.error('[LessonPageClient] digest 기반 패키지 조회 실패', error);
+            return null;
+          }
+          console.warn(
+            `[LessonPageClient] 트랜잭션 정보를 아직 찾지 못했습니다. 재시도합니다... (시도 ${attempt + 1}/${maxAttempts})`
+          );
+        }
+
+        if (attempt < maxAttempts - 1) {
+          await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+        }
+      }
+
+      console.warn('[LessonPageClient] 모든 재시도 후에도 패키지 ID를 찾지 못했습니다.');
+      return null;
+    },
+    []
+  );
+
   const handleCompileAndDeploy = async (transaction: any) => {
     if (!currentAccount) {
       alert('먼저 지갑을 연결해주세요!');
@@ -115,55 +212,27 @@ export function LessonPageClient({
           },
         },
         {
-          onSuccess: (result) => {
+          onSuccess: async (result) => {
             console.log('Transaction successful with full result:', result);
 
             console.log('Effects:', result.effects);
 
             // Extract package ID from objectChanges for published packages
-            let deployedPackageId = null;
-            if (result.objectChanges) {
-              console.log('Checking objectChanges array of length:', result.objectChanges.length);
-              for (const change of result.objectChanges) {
-                console.log('Change type:', change.type, 'Change:', change);
-                if (change.type === 'published') {
-                  deployedPackageId = change.packageId;
-                  console.log('Found deployed package ID from objectChanges:', deployedPackageId);
-                  break;
-                }
-              }
-            }
+            let deployedPackageId = extractPackageIdFromObjectChanges((result as any).objectChanges);
 
-            // If objectChanges didn't work, try to extract from effects
-            if (!deployedPackageId && result.effects) {
-              // Check for created objects (package will be in created)
-              if (result.effects.created) {
-                for (const obj of result.effects.created) {
-                  console.log('Created object:', obj);
-                  // Package objects have a specific pattern
-                  if (obj.owner && typeof obj.owner === 'object' && 'Immutable' in obj.owner) {
-                    deployedPackageId = obj.reference.objectId;
-                    console.log('Found package ID from effects.created:', deployedPackageId);
-                    break;
-                  }
-                }
-              }
+            if (!deployedPackageId) {
+              deployedPackageId = await fetchPackageIdByDigest((result as any).digest);
             }
 
             if (deployedPackageId) {
               handlePackageDeployed(deployedPackageId);
+              ApiMoveCompiler.persistDeploymentResult(transaction, deployedPackageId).catch((error) => {
+                console.error('[LessonPageClient] Supabase 저장 비동기 오류', error);
+              });
               alert(`🚀 패키지가 성공적으로 배포되었습니다!\n\nPackage ID: ${deployedPackageId}`);
             } else {
-              // Fallback to old method if objectChanges is not available
-              const fallbackId = result.effects?.created?.[0]?.reference?.objectId;
-              if (fallbackId) {
-                console.log('Using fallback package ID:', fallbackId);
-                handlePackageDeployed(fallbackId);
-                alert(`🚀 패키지가 성공적으로 배포되었습니다!\n\nPackage ID: ${fallbackId}`);
-              } else {
-                console.log('Could not extract package ID from transaction result');
-                alert('🎉 트랜잭션이 성공했습니다!');
-              }
+              console.log('Could not extract package ID from transaction result');
+              alert('🎉 트랜잭션이 성공했습니다! 하지만 패키지 ID 확인에 실패했습니다.');
             }
           },
           onError: (error) => {
@@ -180,12 +249,15 @@ export function LessonPageClient({
     }
   };
 
-  const handlePackageDeployed = useCallback((id: string) => {
-    setPackageId(id);
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem('smr-package-id', id);
-    }
-  }, []);
+  const handlePackageDeployed = useCallback(
+    (id: string) => {
+      setPackageId(id);
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('smr-package-id', id);
+      }
+    },
+    []
+  );
 
   const handleMintSwimmer = async (name: string, species: string) => {
     if (!packageId) {
@@ -261,6 +333,14 @@ export function LessonPageClient({
                   onCompileAndDeploy={handleCompileAndDeploy}
                   disabled={!currentAccount || isDeploying || isMinting}
                   senderAddress={currentAccount?.address}
+                  deploymentMetadata={
+                    currentAccount?.address
+                      ? {
+                          walletAddress: currentAccount.address,
+                          lessonSlug,
+                        }
+                      : undefined
+                  }
                 />
               ) : (
                 <DeploymentPreview config={deploymentConfig} lessonSlug={lessonSlug} chapterSlug={chapterSlug} />

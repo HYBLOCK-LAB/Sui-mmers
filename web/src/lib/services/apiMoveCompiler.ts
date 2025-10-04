@@ -42,7 +42,13 @@ export class ApiMoveCompiler {
   static async createDeployTransaction(
     moduleName: string,
     sourceCode: string,
-    senderAddress: string
+    senderAddress: string,
+    options?: {
+      persist?: {
+        walletAddress: string;
+        lessonSlug?: string;
+      };
+    }
   ): Promise<Transaction> {
     // API를 통해 Move 코드 컴파일
     const { bytecode, dependencies } = await this.compileMove(moduleName, sourceCode);
@@ -83,7 +89,78 @@ export class ApiMoveCompiler {
       commands: tx.blockData.transactions,
     });
 
+    if (options?.persist) {
+      ApiMoveCompiler.registerDeploymentMetadata(tx, {
+        walletAddress: options.persist.walletAddress,
+        lessonSlug: options.persist.lessonSlug,
+      });
+      console.log('[ApiMoveCompiler] 배포 메타데이터 등록 완료', options.persist);
+    }
+
     return tx;
+  }
+
+  private static readonly deploymentMetadata = new WeakMap<
+    Transaction,
+    {
+      walletAddress: string;
+      lessonSlug?: string;
+    }
+  >();
+
+  private static registerDeploymentMetadata(
+    tx: Transaction,
+    metadata: {
+      walletAddress: string;
+      lessonSlug?: string;
+    }
+  ) {
+    this.deploymentMetadata.set(tx, metadata);
+  }
+
+  static hasDeploymentMetadata(tx: Transaction): boolean {
+    return this.deploymentMetadata.has(tx);
+  }
+
+  static async persistDeploymentResult(tx: Transaction, packageId: string) {
+    console.log('[ApiMoveCompiler] persistDeploymentResult 호출', { packageId });
+    const metadata = this.deploymentMetadata.get(tx);
+
+    if (!metadata) {
+      console.warn('[ApiMoveCompiler] 저장할 배포 메타데이터를 찾지 못했습니다.');
+      return;
+    }
+
+    this.deploymentMetadata.delete(tx);
+
+    try {
+      console.log('[ApiMoveCompiler] Supabase 배포 정보 저장 시도', {
+        packageId,
+        walletAddress: metadata.walletAddress,
+        lessonSlug: metadata.lessonSlug,
+      });
+
+      const response = await fetch('/api/deployments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          walletAddress: metadata.walletAddress,
+          packageId,
+          lessonSlug: metadata.lessonSlug,
+        }),
+      });
+
+      if (!response.ok) {
+        const message = await response.text();
+        console.warn('[ApiMoveCompiler] Supabase 저장 실패', message);
+      } else {
+        console.log('[ApiMoveCompiler] Supabase 저장 성공', { packageId });
+      }
+    } catch (error) {
+      console.error('[ApiMoveCompiler] Supabase 저장 중 오류', error);
+    }
   }
 
   /**
