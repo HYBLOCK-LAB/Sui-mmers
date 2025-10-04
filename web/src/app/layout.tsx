@@ -1,10 +1,9 @@
 import type { Metadata } from 'next';
-import { ReactNode, useState } from 'react';
+import { ReactNode } from 'react';
 import '@/styles/globals.css';
 import '@mysten/dapp-kit/dist/index.css';
 import { Header } from '@/components/Header';
 import { Providers } from '@/app/providers';
-import { Button } from '@/components/ui/button';
 
 export const metadata: Metadata = {
   title: 'Sui-mmers',
@@ -15,9 +14,17 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <Providers>
-        <body className="min-h-screen text-gray-900 antialiased">
+        <body className="min-h-screen flex flex-col text-gray-900 antialiased bg-gradient-to-b from-white via-web3-50/15 to-white">
           <Header />
-          {children}
+          <main className="flex-1 flex flex-col">
+            {children}
+          </main>
+          <footer className="px-4 sm:px-6 lg:px-10 pb-6">
+            <div className="mx-auto max-w-6xl rounded-3xl border border-web3-100/40 bg-white/92 px-4 py-3 text-center text-xs sm:text-sm text-web3-700 shadow-sm">
+              <p>Made with care for Sui-mmers - Keep swimming forward!</p>
+              <p>© 2025 HYBLOCK. All Rights Reserved.</p>
+            </div>
+          </footer>
         </body>
       </Providers>
     </html>

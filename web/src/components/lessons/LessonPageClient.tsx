@@ -271,7 +271,7 @@ export function LessonPageClient({
         <LessonDescription markdown={markdown} />
       )}
 
-      <div className="flex items-center justify-between border-t border-gray-200 pt-6">
+      <div className="flex items-center justify-between pt-6">
         {previousHref ? (
           <Button asChild>
             <Link href={previousHref}>Previous: {previousChapterTitle ?? 'Continue'} </Link>

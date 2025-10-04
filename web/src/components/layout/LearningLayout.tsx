@@ -87,8 +87,8 @@ export function LearningLayout({ children }: { children: ReactNode }) {
 
   return (
     <SidebarContext.Provider value={providerValue}>
-      <div className="min-h-screen">
-        <div className="container mx-auto px-4 py-12 lg:grid lg:grid-cols-[280px_1fr] lg:gap-10">
+      <div className="flex flex-1 min-h-0">
+        <div className="container mx-auto px-4 pt-12 pb-6 lg:grid lg:grid-cols-[280px_1fr] lg:gap-10">
           <aside className="hidden lg:block">
             <div className="sticky top-24">
               <Sidebar
