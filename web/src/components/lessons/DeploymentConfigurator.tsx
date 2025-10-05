@@ -1,5 +1,4 @@
-import { useMemo, useState, useEffect, useRef } from 'react';
-import { LessonDescription } from '@/components/LessonDescription';
+﻿import { useMemo, useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MintSwimmerPanel } from '@/components/lessons/MintSwimmerPanel';
 import { DEFAULT_VALUES } from '@/src/contracts/moveTemplates';
@@ -40,26 +39,36 @@ const toNumber = (value: string, fallback: number) => {
 const getLocationLabel = (value: string) =>
   START_LOCATIONS.find((option) => option.value === value)?.label ?? 'Unknown launchpad';
 
-// 이미지 색상 변경 함수들
+// ?대?吏 ?됱긽 蹂寃??⑥닔??
 const rgbToHsl = (r: number, g: number, b: number) => {
-  r /= 255, g /= 255, b /= 255;
-  let max = Math.max(r, g, b), min = Math.min(r, g, b);
-  let h: number, s: number, l = (max + min) / 2;
+  (r /= 255), (g /= 255), (b /= 255);
+  let max = Math.max(r, g, b),
+    min = Math.min(r, g, b);
+  let h: number,
+    s: number,
+    l = (max + min) / 2;
   if (max === min) {
     h = s = 0;
   } else {
     let d = max - min;
     s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
     switch (max) {
-      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-      case g: h = (b - r) / d + 2; break;
-      case b: h = (r - g) / d + 4; break;
-      default: h = 0;
+      case r:
+        h = (g - b) / d + (g < b ? 6 : 0);
+        break;
+      case g:
+        h = (b - r) / d + 2;
+        break;
+      case b:
+        h = (r - g) / d + 4;
+        break;
+      default:
+        h = 0;
     }
     h /= 6;
   }
   return [h * 360, s, l];
-}
+};
 
 const hslToRgb = (h: number, s: number, l: number) => {
   let r: number, g: number, b: number;
@@ -82,30 +91,22 @@ const hslToRgb = (h: number, s: number, l: number) => {
     b = hue2rgb(p, q, h - 1 / 3);
   }
   return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
-}
+};
 
 const recolorImageByHue = (image: HTMLImageElement, newHue: number, sourceHueMin: number, sourceHueMax: number) => {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (!ctx) return null;
-  
+
   canvas.width = image.width;
   canvas.height = image.height;
 
-  // 1. 캔버스에 원본 이미지 그리기
   ctx.drawImage(image, 0, 0);
 
-  // 2. 픽셀 데이터 가져오기
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const data = imageData.data;
 
-  // 3. 사용자가 지정한 원본 색상 Hue 범위 (파란색/하늘색 범위)
-  // const sourceHueMin = 180; // 하늘색
-  // const sourceHueMax = 220; // 파란색
-
-  // 4. 모든 픽셀을 순회하며 조건 확인 및 변경
   for (let i = 0; i < data.length; i += 4) {
-    // 투명 픽셀은 건너뛰기
     if (data[i + 3] === 0) continue;
 
     const r = data[i];
@@ -115,40 +116,35 @@ const recolorImageByHue = (image: HTMLImageElement, newHue: number, sourceHueMin
     const hsl = rgbToHsl(r, g, b);
     const hue = hsl[0];
 
-    // 현재 픽셀의 Hue가 지정한 범위(180~220) 안에 있는지 확인
     if (hue >= sourceHueMin && hue <= sourceHueMax) {
-      // 새로운 Hue와 원본의 채도(S), 명도(L)를 사용해 새 RGB 값을 계산
       const newRgb = hslToRgb(newHue, hsl[1], hsl[2]);
-      
-      // 픽셀 데이터 교체
-      data[i] = newRgb[0];     // Red
+
+      data[i] = newRgb[0]; // Red
       data[i + 1] = newRgb[1]; // Green
       data[i + 2] = newRgb[2]; // Blue
     }
   }
 
-  // 5. 수정된 픽셀 데이터를 캔버스에 다시 그리기
   ctx.putImageData(imageData, 0, 0);
   return canvas.toDataURL();
-}
+};
 
-// RGB 색상을 Hue로 변환하는 함수
 const rgbToHue = (r: number, g: number, b: number) => {
   const hsl = rgbToHsl(r, g, b);
   return hsl[0];
 };
 
-// HEX 색상을 RGB로 변환하는 함수
 const hexToRgb = (hex: string) => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result ? {
-    r: parseInt(result[1], 16),
-    g: parseInt(result[2], 16),
-    b: parseInt(result[3], 16)
-  } : null;
+  return result
+    ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16),
+      }
+    : null;
 };
 
-// HEX 색상을 Hue로 변환하는 함수
 const hexToHue = (hex: string) => {
   const rgb = hexToRgb(hex);
   if (!rgb) return 0;
@@ -156,7 +152,6 @@ const hexToHue = (hex: string) => {
 };
 
 interface DeploymentConfiguratorProps {
-  markdown: string;
   config: DeploymentConfig;
   onConfigChange: (updates: Partial<DeploymentConfig>) => void;
   lessonSlug?: string;
@@ -168,7 +163,6 @@ interface DeploymentConfiguratorProps {
 }
 
 export function DeploymentConfigurator({
-  markdown,
   config,
   onConfigChange,
   lessonSlug,
@@ -186,8 +180,6 @@ export function DeploymentConfigurator({
 
   return (
     <div className="space-y-6">
-      <LessonDescription markdown={markdown} />
-
       <Card className="border-emerald-200">
         <CardHeader>
           <CardTitle className="text-lg">Launch Configuration</CardTitle>
@@ -261,20 +253,26 @@ export function DeploymentConfigurator({
           {!(lessonSlug === 'ptb-and-items' && chapterSlug === 'deploy-tuna') && (
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <label className="text-xs font-semibold uppercase tracking-wide text-gray-600">Starting distance (m)</label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+                  Starting distance (m)
+                </label>
                 <input
                   type="number"
                   min={0}
                   max={500}
                   value={config.startingDistance}
                   onChange={(event) =>
-                    updateConfig({ startingDistance: Math.max(0, toNumber(event.target.value, config.startingDistance)) })
+                    updateConfig({
+                      startingDistance: Math.max(0, toNumber(event.target.value, config.startingDistance)),
+                    })
                   }
                   className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 />
               </div>
               <div>
-                <label className="text-xs font-semibold uppercase tracking-wide text-gray-600">Base speed (m/hour)</label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+                  Base speed (m/hour)
+                </label>
                 <input
                   type="range"
                   min={40}
@@ -294,7 +292,7 @@ export function DeploymentConfigurator({
               <label className="text-xs font-semibold uppercase tracking-wide text-gray-600">Tuna size</label>
               <select
                 value={config.size || 'medium'}
-                onChange={(event) => updateConfig({ c: event.target.value as 'small' | 'medium' | 'large' })}
+                onChange={(event) => updateConfig({ size: event.target.value as 'small' | 'medium' | 'large' })}
                 className="mt-2 w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 text-base"
               >
                 <option value="small">Small (+5 hunger)</option>
@@ -306,7 +304,9 @@ export function DeploymentConfigurator({
 
           {!(lessonSlug === 'swimmer-foundations' && chapterSlug === 'deploy-swimmer') && (
             <div>
-              <label className="text-xs font-semibold uppercase tracking-wide text-gray-600">Sprint bonus (tuna boost)</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+                Sprint bonus (tuna boost)
+              </label>
               <input
                 type="range"
                 min={0}
@@ -321,7 +321,7 @@ export function DeploymentConfigurator({
           )}
         </CardContent>
       </Card>
-           {onMint && (
+      {onMint && (
         <MintSwimmerPanel
           onMint={onMint}
           isMinting={isMinting}
@@ -349,7 +349,7 @@ export function DeploymentPreview({ config, lessonSlug, chapterSlug }: Deploymen
 
   useEffect(() => {
     animationRef.current = setInterval(() => {
-    setSwimFrame((prev) => prev + 1);
+      setSwimFrame((prev) => prev + 1);
     }, 200);
 
     return () => {
@@ -359,7 +359,6 @@ export function DeploymentPreview({ config, lessonSlug, chapterSlug }: Deploymen
     };
   }, []);
 
-  // 색상 변경 시 모든 애니메이션 프레임 이미지 재생성
   useEffect(() => {
     let cancelled = false;
     const hue = hexToHue(config.swimmerColor);
@@ -376,34 +375,34 @@ export function DeploymentPreview({ config, lessonSlug, chapterSlug }: Deploymen
             next.set(key, recolored);
             return next;
           });
-        };
+        }
         img.src = src;
       };
+    };
+
+    [1, 2, 3].forEach((frame) => {
+      updateImage(`swimmer-frame-${frame}`, `/images/mint_water(${frame}).png`, [148, 151], hue);
+    });
+
+    if (tunaHue !== undefined) {
+      updateImage('tuna-can', '/images/tuna_can.png', [196, 199], tunaHue);
+    } else {
+      setRecoloredImages((prev) => {
+        if (!prev.has('tuna-can')) {
+          return prev;
+        }
+        const next = new Map(prev);
+        next.delete('tuna-can');
+        return next;
+      });
     }
-
-  [1, 2, 3].forEach((frame) => {
-    updateImage(`swimmer-frame-${frame}`, `/images/mint_water(${frame}).png`, [148, 151], hue);
-  });
-
-  if (tunaHue !== undefined) {
-        updateImage('tuna-can', '/images/tuna_can.png', [196, 199], tunaHue);
-      } else {
-        setRecoloredImages((prev) => {
-          if (!prev.has('tuna-can')) {
-            return prev;
-          }
-          const next = new Map(prev);
-          next.delete('tuna-can');
-          return next;
-        });
-      }
 
     return () => {
       cancelled = true;
     };
   }, [config.swimmerColor, config.color]);
   const isTunaChapter = lessonSlug === 'ptb-and-items' && chapterSlug === 'deploy-tuna';
-  
+
   const frameSequence = [1, 2, 3, 2];
   const frameIndex = frameSequence[swimFrame % frameSequence.length];
   const currentSwimImage =
@@ -412,15 +411,15 @@ export function DeploymentPreview({ config, lessonSlug, chapterSlug }: Deploymen
     <Card className="border-sky-200">
       <CardHeader>
         <CardTitle className="text-lg">Deployment Preview</CardTitle>
-         <p className="text-sm text-gray-500">Confirm the configuration you will carry into the blockchain.</p>
+        <p className="text-sm text-gray-500">Confirm the configuration you will carry into the blockchain.</p>
       </CardHeader>
       <CardContent className="space-y-4 text-sm">
         <div className="flex justify-center">
-           {!isTunaChapter ? (
+          {!isTunaChapter ? (
             <div className="relative h-[320px] w-[320px] sm:h-[360px] sm:w-[360px]">
               <img src={currentSwimImage} alt="Swimmer" className="h-full w-full object-contain" />
             </div>
-        ) : (
+          ) : (
             <div className="relative w-[550px] h-[550px]">
               <img
                 src={recoloredImages.get('tuna-can') || '/images/tuna_can.png'}

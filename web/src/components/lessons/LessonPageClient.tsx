@@ -1,19 +1,16 @@
-﻿'use client';
+'use client';
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { CodeEditor, type StoredDeployment } from '@/components/CodeEditor';
+import type { StoredDeployment } from '@/components/CodeEditor';
 import { LessonDescription } from '@/components/LessonDescription';
 import { getLessonRoute } from '@/lib/lessons';
 import { Transaction } from '@mysten/sui/transactions';
 import { useLessonNavigation } from '@/components/layout/LearningLayout';
-import {
-  DeploymentConfigurator,
-  DeploymentPreview,
-  createDefaultDeploymentConfig,
-} from '@/components/lessons/DeploymentConfigurator';
+import { createDefaultDeploymentConfig } from '@/components/lessons/DeploymentConfigurator';
 import type { DeploymentConfig } from '@/components/lessons/DeploymentConfigurator';
+import { CodePlaygroundView, DeploymentWorkspaceView, LessonWorkspaceTabs } from '@/components/lessons/lesson-page';
 import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
 import { CLOCK_OBJECT_ID } from '@/lib/services/suiService';
 import { ApiMoveCompiler } from '@/lib/services/apiMoveCompiler';
@@ -84,21 +81,18 @@ export function LessonPageClient({
     }
   }, [lessonSlug, chapterSlug, isDeploymentChapter]);
 
-  const setSelectedPackageId = useCallback(
-    (value: string | null) => {
-      setPackageId(value);
-      if (typeof window === 'undefined') {
-        return;
-      }
+  const setSelectedPackageId = useCallback((value: string | null) => {
+    setPackageId(value);
+    if (typeof window === 'undefined') {
+      return;
+    }
 
-      if (value) {
-        window.localStorage.setItem('smr-package-id', value);
-      } else {
-        window.localStorage.removeItem('smr-package-id');
-      }
-    },
-    []
-  );
+    if (value) {
+      window.localStorage.setItem('smr-package-id', value);
+    } else {
+      window.localStorage.removeItem('smr-package-id');
+    }
+  }, []);
 
   const fetchDeploymentHistory = useCallback(
     async (address: string) => {
@@ -147,7 +141,6 @@ export function LessonPageClient({
     [setSelectedPackageId]
   );
 
-
   useEffect(() => {
     if (!currentAccount?.address) {
       setDeploymentHistory([]);
@@ -185,56 +178,53 @@ export function LessonPageClient({
     return null;
   };
 
-  const fetchPackageIdByDigest = useCallback(
-    async (digest: string | undefined | null) => {
-      if (!digest) return null;
-      const network = process.env.NEXT_PUBLIC_SUI_NETWORK ?? 'testnet';
-      const client = new SuiClient({ url: getFullnodeUrl(network) });
-      const maxAttempts = 5;
-      const retryDelayMs = 1000;
+  const fetchPackageIdByDigest = useCallback(async (digest: string | undefined | null) => {
+    if (!digest) return null;
+    const network = (process.env.NEXT_PUBLIC_SUI_NETWORK ?? 'testnet') as 'mainnet' | 'testnet' | 'devnet' | 'localnet';
+    const client = new SuiClient({ url: getFullnodeUrl(network) });
+    const maxAttempts = 5;
+    const retryDelayMs = 1000;
 
-      for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-        try {
-          const txResult = await client.getTransactionBlock({
-            digest,
-            options: {
-              showObjectChanges: true,
-              showEffects: true,
-            },
-          });
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      try {
+        const txResult = await client.getTransactionBlock({
+          digest,
+          options: {
+            showObjectChanges: true,
+            showEffects: true,
+          },
+        });
 
-          const fromObjectChanges = extractPackageIdFromObjectChanges(txResult.objectChanges as any[]);
-          if (fromObjectChanges) {
-            return fromObjectChanges;
-          }
-
-          const created = txResult.effects?.created ?? [];
-          for (const item of created as any[]) {
-            if (item?.owner && typeof item.owner === 'object' && 'Immutable' in item.owner) {
-              return item.reference?.objectId ?? null;
-            }
-          }
-        } catch (error) {
-          const message = (error as Error)?.message ?? String(error);
-          if (!message.includes('Could not find the referenced transaction')) {
-            console.error('[LessonPageClient] failed to fetch package id by digest', error);
-            return null;
-          }
-          console.warn(
-            `[LessonPageClient] transaction not yet available, retrying... (attempt ${attempt + 1}/${maxAttempts})`
-          );
+        const fromObjectChanges = extractPackageIdFromObjectChanges(txResult.objectChanges as any[]);
+        if (fromObjectChanges) {
+          return fromObjectChanges;
         }
 
-        if (attempt < maxAttempts - 1) {
-          await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+        const created = txResult.effects?.created ?? [];
+        for (const item of created as any[]) {
+          if (item?.owner && typeof item.owner === 'object' && 'Immutable' in item.owner) {
+            return item.reference?.objectId ?? null;
+          }
         }
+      } catch (error) {
+        const message = (error as Error)?.message ?? String(error);
+        if (!message.includes('Could not find the referenced transaction')) {
+          console.error('[LessonPageClient] failed to fetch package id by digest', error);
+          return null;
+        }
+        console.warn(
+          `[LessonPageClient] transaction not yet available, retrying... (attempt ${attempt + 1}/${maxAttempts})`
+        );
       }
 
-      console.warn('[LessonPageClient] package id not found after all retries');
-      return null;
-    },
-    []
-  );
+      if (attempt < maxAttempts - 1) {
+        await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+      }
+    }
+
+    console.warn('[LessonPageClient] package id not found after all retries');
+    return null;
+  }, []);
 
   const handleCompileAndDeploy = async (transaction: any) => {
     if (!currentAccount) {
@@ -246,10 +236,12 @@ export function LessonPageClient({
     try {
       signAndExecute(
         {
-          transaction,
-          options: {
-            showObjectChanges: true, // Enable object changes to get package details
-            showEffects: true,
+          transaction: {
+            ...transaction,
+            options: {
+              showObjectChanges: true, // Enable object changes to get package details
+              showEffects: true,
+            },
           },
         },
         {
@@ -354,65 +346,53 @@ Package ID: ${deployedPackageId}`);
 
       {showEditor ? (
         isDeploymentChapter ? (
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] items-start">
-            <DeploymentConfigurator
-              markdown={markdown}
-              config={deploymentConfig}
-              onConfigChange={handleConfigChange}
-              lessonSlug={lessonSlug}
-              chapterSlug={chapterSlug}
-              onMint={handleMintSwimmer}
-              isMinting={isMinting}
-              mintDisabled={!currentAccount || !packageId || isDeploying}
-              packageId={packageId}
-            />
-            <div className="space-y-4 self-start">
-              <div className="flex items-center gap-2">
-                <button type="button" className={tabClassName('code')} onClick={() => setWorkspaceTab('code')}>
-                  Code Playground
-                </button>
-                <button type="button" className={tabClassName('preview')} onClick={() => setWorkspaceTab('preview')}>
-                  Deployment Preview
-                </button>
-              </div>
-              {workspaceTab === 'code' ? (
-                <CodeEditor
-                  codeTemplate={codeTemplate}
-                  readOnly={effectiveReadOnly}
-                  onCompileAndDeploy={handleCompileAndDeploy}
-                  disabled={!currentAccount || isDeploying || isMinting}
-                  senderAddress={currentAccount?.address}
-                  deploymentMetadata={
-                    currentAccount?.address
-                      ? {
-                          walletAddress: currentAccount.address,
-                          lessonSlug,
-                        }
-                      : undefined
-                  }
-                  deploymentHistory={deploymentHistory}
-                  selectedDeploymentPackageId={packageId}
-                  onSelectDeployment={handleSelectStoredPackage}
-                />
-              ) : (
-                <DeploymentPreview config={deploymentConfig} lessonSlug={lessonSlug} chapterSlug={chapterSlug} />
-              )}
-            </div>
+          <div className="space-y-6">
+            <LessonWorkspaceTabs activeTab={workspaceTab} onSelect={setWorkspaceTab} />
+            {workspaceTab === 'code' ? (
+              <CodePlaygroundView
+                markdown={markdown}
+                codeTemplate={codeTemplate}
+                codeSkeletone={effectiveCodeSkeletone}
+                readOnly={effectiveReadOnly}
+                onCompileAndDeploy={handleCompileAndDeploy}
+                disabled={!currentAccount || isDeploying || isMinting}
+                senderAddress={currentAccount?.address}
+                deploymentMetadata={
+                  currentAccount?.address
+                    ? {
+                        walletAddress: currentAccount.address,
+                        lessonSlug,
+                      }
+                    : undefined
+                }
+                deploymentHistory={deploymentHistory}
+                selectedDeploymentPackageId={packageId}
+                onSelectDeployment={handleSelectStoredPackage}
+              />
+            ) : (
+              <DeploymentWorkspaceView
+                config={deploymentConfig}
+                onConfigChange={handleConfigChange}
+                lessonSlug={lessonSlug}
+                chapterSlug={chapterSlug}
+                onMint={handleMintSwimmer}
+                isMinting={isMinting}
+                mintDisabled={!currentAccount || !packageId || isDeploying}
+                packageId={packageId}
+              />
+            )}
           </div>
         ) : (
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] items-start">
-            <LessonDescription markdown={markdown} className="h-full" />
-            <CodeEditor
-              codeTemplate={codeTemplate}
-              codeSkeletone={effectiveCodeSkeletone}
-              readOnly={effectiveReadOnly}
-            />
-          </div>
+          <CodePlaygroundView
+            markdown={markdown}
+            codeTemplate={codeTemplate}
+            codeSkeletone={effectiveCodeSkeletone}
+            readOnly={effectiveReadOnly}
+          />
         )
       ) : (
         <LessonDescription markdown={markdown} />
       )}
-
       <div className="flex items-center justify-between pt-6">
         {previousHref ? (
           <Button asChild>
@@ -432,11 +412,3 @@ Package ID: ${deployedPackageId}`);
     </div>
   );
 }
-
-
-
-
-
-
-
-
