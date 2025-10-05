@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useId } from 'react';
+import type { ChangeEvent } from 'react';
 import dynamic from 'next/dynamic';
 import type { editor as MonacoEditor } from 'monaco-editor';
 import { DEFAULT_VALUES } from '@/src/contracts/moveTemplates';
@@ -20,6 +21,15 @@ const DiffEditor = dynamic(() => import('@monaco-editor/react').then((mod) => mo
   ),
 });
 
+export type StoredDeployment = {
+  id: string;
+  package_id: string;
+  wallet_address?: string | null;
+  lesson_slug?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
 interface CodeEditorProps {
   onCompileAndDeploy?: (transaction: any) => void | Promise<void>;
   disabled?: boolean;
@@ -31,6 +41,9 @@ interface CodeEditorProps {
     walletAddress: string;
     lessonSlug?: string;
   };
+  deploymentHistory?: StoredDeployment[];
+  selectedDeploymentPackageId?: string | null;
+  onSelectDeployment?: (packageId: string | null) => void;
 }
 
 const FALLBACK_TEMPLATE = `module swimming::example {
@@ -111,6 +124,23 @@ const createHintPlaceholder = (line: string): string => {
   return indent + ' ';
 };
 
+const formatPackageId = (value: string): string =>
+  value.length > 16 ? `${value.slice(0, 6)}...${value.slice(-4)}` : value;
+
+const buildDeploymentOptionLabel = (deployment: StoredDeployment): string => {
+  const segments: string[] = [formatPackageId(deployment.package_id)];
+  if (deployment.lesson_slug) {
+    segments.push(deployment.lesson_slug);
+  }
+  if (deployment.updated_at) {
+    const parsed = Date.parse(deployment.updated_at);
+    if (!Number.isNaN(parsed)) {
+      segments.push(new Date(parsed).toLocaleString());
+    }
+  }
+  return segments.join(' - ');
+};
+
 export function CodeEditor({
   onCompileAndDeploy,
   disabled,
@@ -119,6 +149,9 @@ export function CodeEditor({
   readOnly = false,
   senderAddress,
   deploymentMetadata,
+  deploymentHistory,
+  selectedDeploymentPackageId,
+  onSelectDeployment,
 }: CodeEditorProps) {
   const [isDeploying, setIsDeploying] = useState(false);
   const [baseSpeed] = useState(DEFAULT_VALUES.baseSpeedPerHour);
@@ -127,6 +160,44 @@ export function CodeEditor({
   const editorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(null);
   const hintDiffDisposablesRef = useRef<Array<{ dispose: () => void }>>([]);
 
+  const deploymentSelectId = useId();
+  const deploymentOptions = useMemo(() => {
+    const unique = new Map<string, StoredDeployment>();
+    (deploymentHistory ?? []).forEach((deployment) => {
+      if (deployment?.package_id) {
+        unique.set(deployment.package_id, deployment);
+      }
+    });
+
+    if (selectedDeploymentPackageId && !unique.has(selectedDeploymentPackageId)) {
+      unique.set(selectedDeploymentPackageId, {
+        id: `selected-${selectedDeploymentPackageId}`,
+        package_id: selectedDeploymentPackageId,
+      });
+    }
+
+    const sorted = Array.from(unique.values()).sort((a, b) => {
+      const aTime = a.updated_at ? Date.parse(a.updated_at) : Number.NEGATIVE_INFINITY;
+      const bTime = b.updated_at ? Date.parse(b.updated_at) : Number.NEGATIVE_INFINITY;
+      return bTime - aTime;
+    });
+
+    return sorted;
+  }, [deploymentHistory, selectedDeploymentPackageId]);
+
+  const hasDeploymentOptions = deploymentOptions.length > 0;
+  const selectedDeploymentValue = selectedDeploymentPackageId ?? '';
+  const canSelectDeployment = typeof onSelectDeployment === 'function';
+  const showDeploymentPicker = hasDeploymentOptions || Boolean(selectedDeploymentPackageId);
+
+  const handleDeploymentSelectionChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    if (!onSelectDeployment) {
+      return;
+    }
+
+    const { value } = event.target;
+    onSelectDeployment(value ? value : null);
+  };
   const processCode = (code?: string) =>
     (code ?? FALLBACK_TEMPLATE)
       .replace(/{{BASE_SPEED_PER_HOUR}}/g, baseSpeed.toString())
@@ -408,11 +479,51 @@ export function CodeEditor({
           </div>
         </CardFooter>
       ) : (
-        <CardFooter className="justify-between gap-2">
+        <CardFooter className="flex flex-col gap-3">
           {onCompileAndDeploy && (
-            <Button onClick={handleDeploy} disabled={disabled || isDeploying} size="lg" className="w-full">
-              {isDeploying ? 'Processing...' : 'Compile & Deploy'}
-            </Button>
+            <>
+              {showDeploymentPicker && (
+                <div className="w-full space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label htmlFor={deploymentSelectId} className="text-sm font-medium text-gray-700">
+                      Saved packages
+                    </label>
+                    {selectedDeploymentPackageId && (
+                      <span className="text-xs text-gray-500">Selected</span>
+                    )}
+                  </div>
+                  {hasDeploymentOptions ? (
+                    <select
+                      id={deploymentSelectId}
+                      className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                      value={selectedDeploymentValue}
+                      onChange={handleDeploymentSelectionChange}
+                      disabled={!canSelectDeployment}
+                    >
+                      <option value="">Deploy new package</option>
+                      {deploymentOptions.map((deployment) => (
+                        <option key={deployment.id} value={deployment.package_id}>
+                          {buildDeploymentOptionLabel(deployment)}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="rounded-md border border-dashed border-gray-300 px-3 py-2 text-xs text-gray-500">
+                      No saved deployments yet. Deploy once to keep your package ID handy.
+                    </div>
+                  )}
+                  {selectedDeploymentPackageId && (
+                    <p className="font-mono text-xs text-gray-500 break-all">{selectedDeploymentPackageId}</p>
+                  )}
+                  <p className="text-xs text-gray-500">
+                    Pick a saved package to reuse it with the minting tools, or deploy a new one.
+                  </p>
+                </div>
+              )}
+              <Button onClick={handleDeploy} disabled={disabled || isDeploying} size="lg" className="w-full">
+                {isDeploying ? 'Processing...' : 'Compile & Deploy'}
+              </Button>
+            </>
           )}
         </CardFooter>
       )}

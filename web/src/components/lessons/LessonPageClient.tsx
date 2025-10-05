@@ -1,9 +1,9 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { CodeEditor } from '@/components/CodeEditor';
+import { CodeEditor, type StoredDeployment } from '@/components/CodeEditor';
 import { LessonDescription } from '@/components/LessonDescription';
 import { getLessonRoute } from '@/lib/lessons';
 import { Transaction } from '@mysten/sui/transactions';
@@ -65,6 +65,8 @@ export function LessonPageClient({
   const [isMinting, setIsMinting] = useState(false);
   const currentAccount = useCurrentAccount();
   const [packageId, setPackageId] = useState<string | null>(null);
+  const [deploymentHistory, setDeploymentHistory] = useState<StoredDeployment[]>([]);
+
   const { mutate: signAndExecute } = useSignAndExecuteTransaction();
 
   useEffect(() => {
@@ -82,39 +84,78 @@ export function LessonPageClient({
     }
   }, [lessonSlug, chapterSlug, isDeploymentChapter]);
 
-  const fetchPersistedPackage = useCallback(
-    async (address: string) => {
-      try {
-        console.log('[LessonPageClient] attempting to fetch package from Supabase', { address });
-        const response = await fetch(`/api/deployments?walletAddress=${address}`);
-        if (!response.ok) {
-          const message = await response.text();
-          console.warn('[LessonPageClient] failed to fetch package info', message);
-          return;
-        }
+  const setSelectedPackageId = useCallback(
+    (value: string | null) => {
+      setPackageId(value);
+      if (typeof window === 'undefined') {
+        return;
+      }
 
-        const { packageId: storedPackageId } = await response.json();
-        if (storedPackageId) {
-          setPackageId(storedPackageId);
-          if (typeof window !== 'undefined') {
-            window.localStorage.setItem('smr-package-id', storedPackageId);
-          }
-          console.log('[LessonPageClient] package fetched from Supabase', { storedPackageId });
-        }
-      } catch (error) {
-        console.error('[LessonPageClient] error fetching package info from Supabase', error);
+      if (value) {
+        window.localStorage.setItem('smr-package-id', value);
+      } else {
+        window.localStorage.removeItem('smr-package-id');
       }
     },
     []
   );
 
+  const fetchDeploymentHistory = useCallback(
+    async (address: string) => {
+      try {
+        console.log('[LessonPageClient] attempting to fetch deployment history from Supabase', { address });
+        const response = await fetch(`/api/deployments?walletAddress=${address}`);
+        if (!response.ok) {
+          const message = await response.text();
+          console.warn('[LessonPageClient] failed to fetch deployment history', message);
+          setDeploymentHistory([]);
+          return;
+        }
+
+        const { packageId: storedPackageId, records } = await response.json();
+        const history: StoredDeployment[] = Array.isArray(records) ? records : [];
+        setDeploymentHistory(history);
+
+        let nextPackageId: string | null = null;
+
+        if (typeof window !== 'undefined') {
+          const cachedPackageId = window.localStorage.getItem('smr-package-id');
+          if (cachedPackageId) {
+            nextPackageId = cachedPackageId;
+          }
+        }
+
+        if (!nextPackageId && storedPackageId) {
+          nextPackageId = storedPackageId;
+        }
+
+        if (!nextPackageId && history.length > 0) {
+          nextPackageId = history[0].package_id;
+        }
+
+        setSelectedPackageId(nextPackageId ?? null);
+
+        console.log('[LessonPageClient] deployment history synced', {
+          count: history.length,
+          selected: nextPackageId,
+        });
+      } catch (error) {
+        console.error('[LessonPageClient] error fetching package info from Supabase', error);
+        setDeploymentHistory([]);
+      }
+    },
+    [setSelectedPackageId]
+  );
+
+
   useEffect(() => {
     if (!currentAccount?.address) {
+      setDeploymentHistory([]);
       return;
     }
 
-    fetchPersistedPackage(currentAccount.address);
-  }, [currentAccount?.address, fetchPersistedPackage]);
+    fetchDeploymentHistory(currentAccount.address);
+  }, [currentAccount?.address, fetchDeploymentHistory]);
 
   const handleConfigChange = (updates: Partial<DeploymentConfig>) => {
     setDeploymentConfig((prev) => ({ ...prev, ...updates }));
@@ -227,10 +268,12 @@ export function LessonPageClient({
               ApiMoveCompiler.persistDeploymentResult(transaction, deployedPackageId).catch((error) => {
                 console.error('[LessonPageClient] async Supabase persist error', error);
               });
-              alert(`🚀 Package deployed successfully!\n\nPackage ID: ${deployedPackageId}`);
+              alert(`Package deployed successfully!
+
+Package ID: ${deployedPackageId}`);
             } else {
               console.log('[LessonPageClient] could not determine package id');
-              alert('🎉 Transaction succeeded! However, package ID could not be determined.');
+              alert('Transaction succeeded! However, package ID could not be determined.');
             }
           },
           onError: (error) => {
@@ -249,12 +292,20 @@ export function LessonPageClient({
 
   const handlePackageDeployed = useCallback(
     (id: string) => {
-      setPackageId(id);
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem('smr-package-id', id);
+      setSelectedPackageId(id);
+      if (currentAccount?.address) {
+        fetchDeploymentHistory(currentAccount.address);
       }
     },
-    []
+    [currentAccount?.address, fetchDeploymentHistory, setSelectedPackageId]
+  );
+
+  const handleSelectStoredPackage = useCallback(
+    (selectedPackageId: string | null) => {
+      console.log('[LessonPageClient] package selection updated', { selectedPackageId });
+      setSelectedPackageId(selectedPackageId);
+    },
+    [setSelectedPackageId]
   );
 
   const handleMintSwimmer = async (name: string, species: string) => {
@@ -277,7 +328,7 @@ export function LessonPageClient({
         },
         {
           onSuccess: () => {
-            alert('🎉 A new Swimmer NFT has arrived!');
+            alert('A new Swimmer NFT has arrived!');
           },
           onError: (error) => {
             console.error('Transaction failed:', error);
@@ -339,6 +390,9 @@ export function LessonPageClient({
                         }
                       : undefined
                   }
+                  deploymentHistory={deploymentHistory}
+                  selectedDeploymentPackageId={packageId}
+                  onSelectDeployment={handleSelectStoredPackage}
                 />
               ) : (
                 <DeploymentPreview config={deploymentConfig} lessonSlug={lessonSlug} chapterSlug={chapterSlug} />
@@ -378,3 +432,11 @@ export function LessonPageClient({
     </div>
   );
 }
+
+
+
+
+
+
+
+

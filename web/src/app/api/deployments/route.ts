@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   const walletAddress = searchParams.get('walletAddress');
 
   if (!walletAddress) {
-    return NextResponse.json({ error: 'walletAddress 파라미터가 필요합니다.' }, { status: 400 });
+    return NextResponse.json({ error: 'walletAddress parameter is required.' }, { status: 400 });
   }
 
   try {
@@ -20,18 +20,18 @@ export async function GET(request: Request) {
       .from(TABLE_NAME)
       .select('*')
       .eq('wallet_address', walletAddress)
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .order('updated_at', { ascending: false });
 
     if (error) {
-      console.error('[GET /api/deployments] Supabase 오류', error);
-      return NextResponse.json({ error: '패키지 정보를 불러오지 못했습니다.' }, { status: 500 });
+      console.error('[GET /api/deployments] Supabase error', error);
+      return NextResponse.json({ error: 'Failed to load deployment history.' }, { status: 500 });
     }
 
+    const deployments = data ?? [];
+
     return NextResponse.json({
-      packageId: data?.package_id ?? null,
-      record: data ?? null,
+      packageId: deployments[0]?.package_id ?? null,
+      records: deployments,
     });
   } catch (error) {
     console.error('[GET /api/deployments] unexpected server error', error);

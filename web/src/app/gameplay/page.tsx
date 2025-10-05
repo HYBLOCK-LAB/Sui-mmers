@@ -8,7 +8,7 @@ import { LearningLayout } from '@/components/layout/LearningLayout';
 import { WalletConnect } from '@/components/WalletConnect';
 import { SwimmingPool } from '@/components/SwimmingPool';
 import { DeployContract } from '@/components/DeployContract';
-import { CodeEditor } from '@/components/CodeEditor';
+import { CodeEditor, type StoredDeployment } from '@/components/CodeEditor';
 import { MintSwimmerPanel } from '@/components/lessons/MintSwimmerPanel';
 import { Button } from '@/components/ui/button';
 import { SuiService, CLOCK_OBJECT_ID } from '@/lib/services/suiService';
@@ -45,11 +45,25 @@ function GameplayContent() {
   const [swimmers, setSwimmers] = useState<SwimmerSummary[]>([]);
   const [tunaCans, setTunaCans] = useState<TunaCanItem[]>([]);
   const [packageId, setPackageId] = useState<string | null>(null);
+  const [deploymentHistory, setDeploymentHistory] = useState<StoredDeployment[]>([]);
   const [isDeploying, setIsDeploying] = useState(false);
   const [isMinting, setIsMinting] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [selectedSwimmerId, setSelectedSwimmerId] = useState('');
   const [selectedTunaId, setSelectedTunaId] = useState('');
+
+  const setSelectedPackageId = useCallback((value: string | null) => {
+    setPackageId(value);
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    if (value) {
+      window.localStorage.setItem('smr-package-id', value);
+    } else {
+      window.localStorage.removeItem('smr-package-id');
+    }
+  }, []);
 
   const extractPackageIdFromObjectChanges = (objectChanges: any[] | undefined | null): string | null => {
     if (!objectChanges) return null;
@@ -159,7 +173,7 @@ function GameplayContent() {
   useEffect(() => {
     if (isMockMode) {
       // Mock 모드에서는 항상 패키지가 배포된 상태로 설정
-      setPackageId('mock-package-id-12345');
+      setSelectedPackageId('mock-package-id-12345');
 
       // Mock 데이터 로드
       setSwimmers(mockSwimmers);
@@ -177,18 +191,18 @@ function GameplayContent() {
 
   const handlePackageDeployed = useCallback(
     (id: string) => {
-      setPackageId(id);
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem('smr-package-id', id);
+      setSelectedPackageId(id);
+      const address = currentAccount?.address;
+      if (address) {
+        fetchDeploymentHistory(address);
       }
-
       if (!isMockMode && currentAccount?.address) {
         persistPackageToSupabase(currentAccount.address, id).catch((error) => {
           console.error('[Gameplay] async package persist error', error);
         });
       }
     },
-    [currentAccount?.address, isMockMode, persistPackageToSupabase]
+    [currentAccount?.address, fetchDeploymentHistory, isMockMode, persistPackageToSupabase, setSelectedPackageId]
   );
 
   // 실제 모드 데이터 로드
@@ -292,7 +306,7 @@ function GameplayContent() {
       const savedPackageId = window.localStorage.getItem('smr-package-id');
       if (savedPackageId) {
         console.log('Loaded package ID from localStorage:', savedPackageId);
-        setPackageId(savedPackageId);
+        setSelectedPackageId(savedPackageId);
       }
     }
   }, [isMockMode]);
@@ -347,6 +361,7 @@ function GameplayContent() {
 
   useEffect(() => {
     if (isMockMode) {
+      setDeploymentHistory([]);
       return;
     }
 
@@ -355,8 +370,8 @@ function GameplayContent() {
       return;
     }
 
-    fetchPersistedPackage(address);
-  }, [currentAccount?.address, fetchPersistedPackage, isMockMode]);
+    fetchDeploymentHistory(address);
+  }, [currentAccount?.address, fetchDeploymentHistory, isMockMode]);
 
   const handleCompileAndDeploy = async (transaction: any) => {
     if (isMockMode) {
@@ -813,7 +828,7 @@ function GameplayContent() {
         {/* 컨트랙트 배포 / 코드 에디터 */}
         {!isMockMode && (
           <section className="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-6">
-            <DeployContract onPackageDeployed={setPackageId} />
+            <DeployContract onPackageDeployed={setSelectedPackageId} />
             <div className="space-y-4">
               <CodeEditor
                 onCompileAndDeploy={handleCompileAndDeploy}
@@ -827,6 +842,9 @@ function GameplayContent() {
                       }
                     : undefined
                 }
+                deploymentHistory={deploymentHistory}
+                selectedDeploymentPackageId={packageId}
+                onSelectDeployment={setSelectedPackageId}
               />
               <MintSwimmerPanel
                 onMint={handleMintSwimmer}
