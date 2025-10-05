@@ -1,14 +1,13 @@
-'use client';
+﻿'use client';
 
-import { DeploymentConfigurator, DeploymentPreview } from '@/components/lessons/DeploymentConfigurator';
-import type { DeploymentConfig } from '@/components/lessons/DeploymentConfigurator';
+import { DeploymentConfigurator, DeploymentPreview, type DeploymentConfig, type MintSwimmerValues } from '@/components/lessons/DeploymentConfigurator';
 
 interface DeploymentWorkspaceViewProps {
   config: DeploymentConfig;
   onConfigChange: (updates: Partial<DeploymentConfig>) => void;
   lessonSlug: string;
   chapterSlug: string;
-  onMint: (name: string, species: string) => void | Promise<void>;
+  onMint: (values: MintSwimmerValues) => void | Promise<void>;
   isMinting: boolean;
   mintDisabled: boolean;
   packageId: string | null;

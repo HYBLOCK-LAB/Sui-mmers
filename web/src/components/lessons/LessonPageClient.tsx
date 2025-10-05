@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
@@ -8,8 +8,7 @@ import { LessonDescription } from '@/components/LessonDescription';
 import { getLessonRoute } from '@/lib/lessons';
 import { Transaction } from '@mysten/sui/transactions';
 import { useLessonNavigation } from '@/components/layout/LearningLayout';
-import { createDefaultDeploymentConfig } from '@/components/lessons/DeploymentConfigurator';
-import type { DeploymentConfig } from '@/components/lessons/DeploymentConfigurator';
+import { createDefaultDeploymentConfig, type DeploymentConfig, type MintSwimmerValues } from '@/components/lessons/DeploymentConfigurator';
 import { CodePlaygroundView, DeploymentWorkspaceView, LessonWorkspaceTabs } from '@/components/lessons/lesson-page';
 import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
 import { CLOCK_OBJECT_ID } from '@/lib/services/suiService';
@@ -300,18 +299,48 @@ Package ID: ${deployedPackageId}`);
     [setSelectedPackageId]
   );
 
-  const handleMintSwimmer = async (name: string, species: string) => {
+  const handleMintSwimmer = async (values: MintSwimmerValues) => {
     if (!packageId) {
       alert('Please deploy the smart contract first!');
       return;
     }
+
+    const sanitizedName = values.name.trim();
+    const sanitizedColorInput = values.color.trim();
+    const sanitizedColor = sanitizedColorInput || deploymentConfig.swimmerColor || '#00cc63';
+
+    if (!sanitizedName) {
+      alert('Please enter a swimmer name first!');
+      return;
+    }
+
+    const normalizeStat = (stat: number) => {
+      const parsed = Number(stat);
+      if (!Number.isFinite(parsed) || parsed < 0) {
+        return 0;
+      }
+      return Math.floor(parsed);
+    };
+
+    const speed = normalizeStat(values.speed);
+    const hunger = normalizeStat(values.hunger);
+    const boost = normalizeStat(values.boost);
+    const distanceTraveled = normalizeStat(values.distanceTraveled);
 
     setIsMinting(true);
     try {
       const tx = new Transaction();
       tx.moveCall({
         target: `${packageId}::swimmer::mint_swimmer`,
-        arguments: [tx.pure.string(name), tx.pure.string(species), tx.object(CLOCK_OBJECT_ID)],
+        arguments: [
+          tx.pure.string(sanitizedName),
+          tx.pure.string(sanitizedColor),
+          tx.pure.u64(speed),
+          tx.pure.u64(hunger),
+          tx.pure.u64(boost),
+          tx.pure.u64(distanceTraveled),
+          tx.object(CLOCK_OBJECT_ID),
+        ],
       });
 
       signAndExecute(

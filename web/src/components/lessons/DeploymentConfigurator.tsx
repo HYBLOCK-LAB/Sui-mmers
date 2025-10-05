@@ -1,6 +1,7 @@
-﻿import { useMemo, useState, useEffect, useRef } from 'react';
+﻿import type { ChangeEvent } from 'react';
+import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { MintSwimmerPanel } from '@/components/lessons/MintSwimmerPanel';
+import { Button } from '@/components/ui/button';
 import { DEFAULT_VALUES } from '@/src/contracts/moveTemplates';
 
 const START_LOCATIONS = [
@@ -18,6 +19,15 @@ export type DeploymentConfig = {
   startingDistance: number;
   baseSpeed: number;
   sprintBonus: number;
+};
+
+export type MintSwimmerValues = {
+  name: string;
+  color: string;
+  speed: number;
+  hunger: number;
+  boost: number;
+  distanceTraveled: number;
 };
 
 const BASE_DEPLOYMENT_CONFIG: DeploymentConfig = {
@@ -39,7 +49,6 @@ const toNumber = (value: string, fallback: number) => {
 const getLocationLabel = (value: string) =>
   START_LOCATIONS.find((option) => option.value === value)?.label ?? 'Unknown launchpad';
 
-// ?대?吏 ?됱긽 蹂寃??⑥닔??
 const rgbToHsl = (r: number, g: number, b: number) => {
   (r /= 255), (g /= 255), (b /= 255);
   let max = Math.max(r, g, b),
@@ -156,7 +165,7 @@ interface DeploymentConfiguratorProps {
   onConfigChange: (updates: Partial<DeploymentConfig>) => void;
   lessonSlug?: string;
   chapterSlug?: string;
-  onMint?: (name: string, species: string) => void | Promise<void>;
+  onMint?: (values: MintSwimmerValues) => void | Promise<void>;
   isMinting?: boolean;
   mintDisabled?: boolean;
   packageId?: string | null;
@@ -172,164 +181,254 @@ export function DeploymentConfigurator({
   mintDisabled,
   packageId,
 }: DeploymentConfiguratorProps) {
-  const currentLocationLabel = useMemo(() => getLocationLabel(config.startingLocation), [config.startingLocation]);
+  const isTunaChapter = lessonSlug === 'ptb-and-items' && chapterSlug === 'deploy-tuna';
+
+  const buildDefaultMintValues = useCallback(
+    (): MintSwimmerValues => ({
+      name: 'My Swimmer',
+      color: config.swimmerColor,
+      speed: config.baseSpeed,
+      hunger: 0,
+      boost: config.sprintBonus,
+      distanceTraveled: config.startingDistance,
+    }),
+    [config.baseSpeed, config.sprintBonus, config.startingDistance, config.swimmerColor]
+  );
+
+  const [mintValues, setMintValues] = useState<MintSwimmerValues>(() => buildDefaultMintValues());
+
+  useEffect(() => {
+    setMintValues(buildDefaultMintValues());
+  }, [buildDefaultMintValues, lessonSlug, chapterSlug]);
 
   const updateConfig = (updates: Partial<DeploymentConfig>) => {
     onConfigChange(updates);
   };
 
+  const handleMintTextFieldChange = (field: 'name' | 'color') => (event: ChangeEvent<HTMLInputElement>) => {
+    const { value } = event.target;
+    setMintValues((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleMintNumberFieldChange =
+    (field: 'speed' | 'hunger' | 'boost' | 'distanceTraveled') => (event: ChangeEvent<HTMLInputElement>) => {
+      const { value } = event.target;
+      setMintValues((prev) => ({
+        ...prev,
+        [field]: Math.max(0, toNumber(value, prev[field] as number)),
+      }));
+    };
+
+  const packageReady = Boolean(packageId);
+  const mintButtonDisabled =
+    !packageReady || mintDisabled || isMinting || (!isTunaChapter && mintValues.name.trim().length === 0);
+
+  const handleMintAction = () => {
+    if (!onMint) return;
+
+    if (isTunaChapter) {
+      onMint({
+        name: 'Tuna Can',
+        color: config.color ?? '#3194be',
+        speed: Math.max(0, Math.floor(config.baseSpeed)),
+        hunger: 0,
+        boost: Math.max(0, Math.floor(config.sprintBonus)),
+        distanceTraveled: Math.max(0, Math.floor(config.startingDistance)),
+      });
+      return;
+    }
+
+    const payload: MintSwimmerValues = {
+      name: mintValues.name.trim(),
+      color: (mintValues.color || config.swimmerColor || '#00cc63').trim(),
+      speed: Math.max(0, Math.floor(mintValues.speed)),
+      hunger: Math.max(0, Math.floor(mintValues.hunger)),
+      boost: Math.max(0, Math.floor(mintValues.boost)),
+      distanceTraveled: Math.max(0, Math.floor(mintValues.distanceTraveled)),
+    };
+
+    if (!payload.name) {
+      alert('Please enter a swimmer name first!');
+      return;
+    }
+
+    onMint(payload);
+  };
+
   return (
     <div className="space-y-6">
       <Card className="border-emerald-200">
-        <CardHeader>
-          <CardTitle className="text-lg">Launch Configuration</CardTitle>
-          <p className="text-sm text-gray-500">
-            Calibrate your swimmer&apos;s look and launch stats before deploying the Move module.
-          </p>
-          <p className="text-xs text-gray-400">Current launch pad: {currentLocationLabel}</p>
-        </CardHeader>
         <CardContent className="space-y-5">
-          {!(lessonSlug === 'ptb-and-items' && chapterSlug === 'deploy-tuna') && (
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wide text-gray-600">Swimmer color</label>
-              <div className="mt-2 flex items-center gap-3">
-                <input
-                  type="color"
-                  value={config.swimmerColor}
-                  onChange={(event) => updateConfig({ swimmerColor: event.target.value })}
-                  className="h-10 w-14 cursor-pointer rounded border border-gray-200 bg-white"
-                  aria-label="Select swimmer color"
-                />
-                <input
-                  type="text"
-                  value={config.swimmerColor}
-                  onChange={(event) => updateConfig({ swimmerColor: event.target.value })}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                  placeholder="#ffffff"
-                />
-              </div>
-            </div>
-          )}
-
-          {lessonSlug === 'ptb-and-items' && chapterSlug === 'deploy-tuna' && (
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wide text-gray-600">Tuna can color</label>
-              <div className="mt-2 flex items-center gap-3">
-                <input
-                  type="color"
-                  value={config.color || '#3194be'}
-                  onChange={(event) => updateConfig({ color: event.target.value })}
-                  className="h-10 w-14 cursor-pointer rounded border border-gray-200 bg-white"
-                  aria-label="Select tuna can color"
-                />
-                <input
-                  type="text"
-                  value={config.color || '#3194be'}
-                  onChange={(event) => updateConfig({ color: event.target.value })}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                  placeholder="#3194be"
-                />
-              </div>
-            </div>
-          )}
-
-          {!(lessonSlug === 'ptb-and-items' && chapterSlug === 'deploy-tuna') && (
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wide text-gray-600">Starting location</label>
-              <select
-                value={config.startingLocation}
-                onChange={(event) => updateConfig({ startingLocation: event.target.value })}
-                className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-              >
-                {START_LOCATIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {!(lessonSlug === 'ptb-and-items' && chapterSlug === 'deploy-tuna') && (
-            <div className="grid gap-4 md:grid-cols-2">
+          {onMint && (
+            <div className="space-y-4 border-t border-gray-200 pt-6">
               <div>
-                <label className="text-xs font-semibold uppercase tracking-wide text-gray-600">
-                  Starting distance (m)
-                </label>
-                <input
-                  type="number"
-                  min={0}
-                  max={500}
-                  value={config.startingDistance}
-                  onChange={(event) =>
-                    updateConfig({
-                      startingDistance: Math.max(0, toNumber(event.target.value, config.startingDistance)),
-                    })
-                  }
-                  className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                />
+                <CardTitle className="text-lg"> {isTunaChapter ? 'Mint Tuna' : 'Mint Swimmer'}</CardTitle>
+                <p className="text-sm text-gray-500">
+                  {isTunaChapter
+                    ? 'Mint a tuna can to boost your swimmer during races.'
+                    : 'Mint a swimmer with your custom looks and launch stats.'}
+                </p>
+                {!packageReady ? (
+                  <p className="text-xs text-amber-600">Deploy your Move package before minting.</p>
+                ) : (
+                  packageId && <p className="text-xs font-mono text-gray-400 break-all">Package ID: {packageId}</p>
+                )}
               </div>
-              <div>
-                <label className="text-xs font-semibold uppercase tracking-wide text-gray-600">
-                  Base speed (m/hour)
-                </label>
-                <input
-                  type="range"
-                  min={40}
-                  max={200}
-                  step={5}
-                  value={config.baseSpeed}
-                  onChange={(event) => updateConfig({ baseSpeed: toNumber(event.target.value, config.baseSpeed) })}
-                  className="mt-4 w-full"
-                />
-                <p className="mt-2 text-xs text-gray-500">Current: {config.baseSpeed} m/hour</p>
-              </div>
-            </div>
-          )}
-
-          {lessonSlug === 'ptb-and-items' && chapterSlug === 'deploy-tuna' && (
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wide text-gray-600">Tuna size</label>
-              <select
-                value={config.size || 'medium'}
-                onChange={(event) => updateConfig({ size: event.target.value as 'small' | 'medium' | 'large' })}
-                className="mt-2 w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 text-base"
-              >
-                <option value="small">Small (+5 hunger)</option>
-                <option value="medium">Medium (+10 hunger)</option>
-                <option value="large">Large (+15 hunger)</option>
-              </select>
-            </div>
-          )}
-
-          {!(lessonSlug === 'swimmer-foundations' && chapterSlug === 'deploy-swimmer') && (
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wide text-gray-600">
-                Sprint bonus (tuna boost)
-              </label>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                step={5}
-                value={config.sprintBonus}
-                onChange={(event) => updateConfig({ sprintBonus: toNumber(event.target.value, config.sprintBonus) })}
-                className="mt-4 w-full"
-              />
-              <p className="mt-2 text-xs text-gray-500">Boost: +{config.sprintBonus} meters</p>
+              {isTunaChapter ? (
+                <>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+                        Tuna can color
+                      </label>
+                      <div className="mt-2 flex items-center gap-3">
+                        <input
+                          type="color"
+                          value={config.color || '#3194be'}
+                          onChange={(event) => updateConfig({ color: event.target.value })}
+                          className="h-10 w-14 cursor-pointer rounded border border-gray-200 bg-white"
+                          aria-label="Select tuna can color"
+                        />
+                        <input
+                          type="text"
+                          value={config.color || '#3194be'}
+                          onChange={(event) => updateConfig({ color: event.target.value })}
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          placeholder="#3194be"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold uppercase tracking-wide text-gray-600">Tuna size</label>
+                      <select
+                        value={config.size || 'medium'}
+                        onChange={(event) => updateConfig({ size: event.target.value as 'small' | 'medium' | 'large' })}
+                        className="mt-2 w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                      >
+                        <option value="small">Small (+5 hunger)</option>
+                        <option value="medium">Medium (+10 hunger)</option>
+                        <option value="large">Large (+15 hunger)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+                        Sprint bonus (tuna boost)
+                      </label>
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        step={5}
+                        value={config.sprintBonus}
+                        onChange={(event) =>
+                          updateConfig({ sprintBonus: toNumber(event.target.value, config.sprintBonus) })
+                        }
+                        className="mt-4 w-full"
+                      />
+                      <p className="mt-2 text-xs text-gray-500">Boost: +{config.sprintBonus} meters</p>
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button onClick={handleMintAction} disabled={mintButtonDisabled} size="lg" className="flex-1">
+                      {isMinting ? 'Minting...' : 'Mint Tuna'}
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+                        Swimmer name
+                      </label>
+                      <input
+                        type="text"
+                        value={mintValues.name}
+                        onChange={handleMintTextFieldChange('name')}
+                        className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                        placeholder="My Swimmer"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+                        Swimmer color (hex)
+                      </label>
+                      <div className="mt-2 flex items-center gap-3">
+                        <input
+                          type="color"
+                          value={mintValues.color}
+                          onChange={handleMintTextFieldChange('color')}
+                          className="h-10 w-14 cursor-pointer rounded border border-gray-200 bg-white"
+                          aria-label="Select swimmer color"
+                        />
+                        <input
+                          type="text"
+                          value={mintValues.color}
+                          onChange={handleMintTextFieldChange('color')}
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          placeholder="#00cc63"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+                        Base speed (m/hour)
+                      </label>
+                      <input
+                        type="range"
+                        min={40}
+                        max={200}
+                        step={5}
+                        value={mintValues.speed}
+                        onChange={handleMintNumberFieldChange('speed')}
+                        className="mt-4 w-full"
+                      />
+                      <p className="mt-2 text-xs text-gray-500">Current: {config.baseSpeed} m/hour</p>
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold uppercase tracking-wide text-gray-600">Hunger</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={mintValues.hunger}
+                        onChange={handleMintNumberFieldChange('hunger')}
+                        className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold uppercase tracking-wide text-gray-600">Boost</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={mintValues.boost}
+                        onChange={handleMintNumberFieldChange('boost')}
+                        className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+                        Starting distance (m)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={mintValues.distanceTraveled}
+                        onChange={handleMintNumberFieldChange('distanceTraveled')}
+                        className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button onClick={handleMintAction} disabled={mintButtonDisabled} size="lg" className="flex-1">
+                      {isMinting ? 'Minting...' : 'Mint Swimmer'}
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </CardContent>
       </Card>
-      {onMint && (
-        <MintSwimmerPanel
-          onMint={onMint}
-          isMinting={isMinting}
-          disabled={mintDisabled}
-          packageId={packageId}
-          resetKey={`${lessonSlug ?? ''}-${chapterSlug ?? ''}`}
-        />
-      )}
     </div>
   );
 }
