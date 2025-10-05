@@ -19,7 +19,7 @@ export function LessonWorkspaceTabs({ activeTab, onSelect }: TLessonWorkspaceTab
         Code Playground
       </button>
       <button type="button" className={buildClassName('preview', activeTab)} onClick={() => onSelect('preview')}>
-        Deployment Preview
+        Minting Preview
       </button>
     </div>
   );

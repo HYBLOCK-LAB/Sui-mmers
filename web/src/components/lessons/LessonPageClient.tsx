@@ -8,7 +8,11 @@ import { LessonDescription } from '@/components/LessonDescription';
 import { getLessonRoute } from '@/lib/lessons';
 import { Transaction } from '@mysten/sui/transactions';
 import { useLessonNavigation } from '@/components/layout/LearningLayout';
-import { createDefaultDeploymentConfig, type TMintingConfig, type TMintSwimmerValues } from '@/components/lessons/DeploymentConfigurator';
+import {
+  createDefaultDeploymentConfig,
+  type TMintingConfig,
+  type TMintSwimmerValues,
+} from '@/components/lessons/DeploymentConfigurator';
 import { CodePlaygroundView, DeploymentWorkspaceView, LessonWorkspaceTabs } from '@/components/lessons/lesson-page';
 import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
 import { CLOCK_OBJECT_ID } from '@/lib/services/suiService';
@@ -235,10 +239,12 @@ export function LessonPageClient({
     try {
       signAndExecute(
         {
-          transaction,
-          options: {
-            showObjectChanges: true, // Enable object changes to get package details
-            showEffects: true,
+          transaction: {
+            ...transaction,
+            options: {
+              showObjectChanges: true, // Enable object changes to get package details
+              showEffects: true,
+            },
           },
         },
         {

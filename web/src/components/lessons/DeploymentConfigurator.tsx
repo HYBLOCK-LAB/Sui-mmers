@@ -1,5 +1,5 @@
 ﻿import type { ChangeEvent } from 'react';
-import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DEFAULT_VALUES } from '@/src/contracts/moveTemplates';
@@ -169,102 +169,91 @@ interface TDeploymentConfiguratorProps {
   isMinting?: boolean;
   mintDisabled?: boolean;
   packageId?: string | null;
+  mintValues: TMintSwimmerValues;
+  onMintValuesChange: (updater: (prev: TMintSwimmerValues) => TMintSwimmerValues) => void;
 }
 
 export function DeploymentConfigurator({
   config,
+
   onConfigChange,
+
   lessonSlug,
+
   chapterSlug,
+
   onMint,
+
   isMinting,
+
   mintDisabled,
+
   packageId,
+
+  mintValues,
+
+  onMintValuesChange,
 }: TDeploymentConfiguratorProps) {
   const isTunaChapter = lessonSlug === 'ptb-and-items' && chapterSlug === 'deploy-tuna';
-
-  const buildDefaultMintValues = useCallback(
-    (): TMintSwimmerValues => ({
-      name: 'My Swimmer',
-      color: config.swimmerColor,
-      speed: config.baseSpeed,
-      hunger: 0,
-      boost: config.sprintBonus,
-      distanceTraveled: config.startingDistance,
-    }),
-    [config.baseSpeed, config.sprintBonus, config.startingDistance, config.swimmerColor]
-  );
-
-  const [mintValues, setMintValues] = useState<TMintSwimmerValues>(() => buildDefaultMintValues());
-
-  useEffect(() => {
-    setMintValues(buildDefaultMintValues());
-  }, [buildDefaultMintValues, lessonSlug, chapterSlug]);
 
   const updateConfig = (updates: Partial<TMintingConfig>) => {
     onConfigChange(updates);
 
-    const hasSwimmerColor = Object.prototype.hasOwnProperty.call(updates, 'swimmerColor');
-    const hasBaseSpeed = Object.prototype.hasOwnProperty.call(updates, 'baseSpeed');
-    const hasSprintBonus = Object.prototype.hasOwnProperty.call(updates, 'sprintBonus');
-    const hasStartingDistance = Object.prototype.hasOwnProperty.call(updates, 'startingDistance');
+    const { swimmerColor, baseSpeed, sprintBonus, startingDistance } = updates;
 
-    if (hasSwimmerColor || hasBaseSpeed || hasSprintBonus || hasStartingDistance) {
-      setMintValues((prev) => {
-        let hasChanges = false;
-        const next = { ...prev };
-
-        if (hasSwimmerColor) {
-          const nextColor = updates.swimmerColor ?? prev.color;
-          if (nextColor !== prev.color) {
-            next.color = nextColor;
-            hasChanges = true;
-          }
-        }
-        if (hasBaseSpeed) {
-          const nextSpeed = updates.baseSpeed ?? prev.speed;
-          if (nextSpeed !== prev.speed) {
-            next.speed = nextSpeed;
-            hasChanges = true;
-          }
-        }
-        if (hasSprintBonus) {
-          const nextBoost = updates.sprintBonus ?? prev.boost;
-          if (nextBoost !== prev.boost) {
-            next.boost = nextBoost;
-            hasChanges = true;
-          }
-        }
-        if (hasStartingDistance) {
-          const nextDistance = updates.startingDistance ?? prev.distanceTraveled;
-          if (nextDistance !== prev.distanceTraveled) {
-            next.distanceTraveled = nextDistance;
-            hasChanges = true;
-          }
-        }
-
-        return hasChanges ? next : prev;
-      });
+    if (
+      swimmerColor === undefined &&
+      baseSpeed === undefined &&
+      sprintBonus === undefined &&
+      startingDistance === undefined
+    ) {
+      return;
     }
+
+    onMintValuesChange((prev) => {
+      const next = { ...prev };
+
+      if (swimmerColor !== undefined) {
+        next.color = swimmerColor;
+      }
+
+      if (baseSpeed !== undefined) {
+        next.speed = baseSpeed;
+      }
+
+      if (sprintBonus !== undefined) {
+        next.boost = sprintBonus;
+      }
+
+      if (startingDistance !== undefined) {
+        next.distanceTraveled = startingDistance;
+      }
+
+      return next;
+    });
   };
 
   const handleMintTextFieldChange = (field: 'name' | 'color') => (event: ChangeEvent<HTMLInputElement>) => {
     const { value } = event.target;
-    setMintValues((prev) => ({ ...prev, [field]: value }));
 
     if (field === 'color') {
       updateConfig({ swimmerColor: value });
+
+      return;
     }
+
+    onMintValuesChange((prev) => (prev.name === value ? prev : { ...prev, name: value }));
   };
 
   const handleMintNumberFieldChange =
     (field: 'speed' | 'hunger' | 'boost' | 'distanceTraveled') => (event: ChangeEvent<HTMLInputElement>) => {
       const { value } = event.target;
-      const fallback = mintValues[field] as number;
-      const numericValue = Math.max(0, toNumber(value, fallback));
+
+      const numericValue = Math.max(0, toNumber(value, mintValues[field] as number));
 
       if (field === 'hunger') {
-        setMintValues((prev) => ({ ...prev, hunger: numericValue }));
+        onMintValuesChange((prev) => (prev.hunger === numericValue ? prev : { ...prev, hunger: numericValue }));
+
         return;
       }
 
@@ -278,6 +267,7 @@ export function DeploymentConfigurator({
     };
 
   const packageReady = Boolean(packageId);
+
   const mintButtonDisabled =
     !packageReady || mintDisabled || isMinting || (!isTunaChapter && mintValues.name.trim().length === 0);
 
@@ -287,26 +277,38 @@ export function DeploymentConfigurator({
     if (isTunaChapter) {
       onMint({
         name: 'Tuna Can',
+
         color: config.color ?? '#3194be',
+
         speed: Math.max(0, Math.floor(config.baseSpeed)),
+
         hunger: 0,
+
         boost: Math.max(0, Math.floor(config.sprintBonus)),
+
         distanceTraveled: Math.max(0, Math.floor(config.startingDistance)),
       });
+
       return;
     }
 
     const payload: TMintSwimmerValues = {
       name: mintValues.name.trim(),
+
       color: (mintValues.color || config.swimmerColor || '#00cc63').trim(),
+
       speed: Math.max(0, Math.floor(mintValues.speed)),
+
       hunger: Math.max(0, Math.floor(mintValues.hunger)),
+
       boost: Math.max(0, Math.floor(mintValues.boost)),
+
       distanceTraveled: Math.max(0, Math.floor(mintValues.distanceTraveled)),
     };
 
     if (!payload.name) {
       alert('Please enter a swimmer name first!');
+
       return;
     }
 
@@ -493,15 +495,37 @@ export function DeploymentConfigurator({
 
 interface TDeploymentPreviewProps {
   config: TMintingConfig;
+
+  mintValues: TMintSwimmerValues;
+
   lessonSlug?: string;
+
   chapterSlug?: string;
+
+  packageId?: string | null;
 }
 
-export function DeploymentPreview({ config, lessonSlug, chapterSlug }: TDeploymentPreviewProps) {
+export function DeploymentPreview({ config, mintValues, lessonSlug, chapterSlug, packageId }: TDeploymentPreviewProps) {
   const locationLabel = useMemo(() => getLocationLabel(config.startingLocation), [config.startingLocation]);
 
+  const normalizeHexColor = (value: string | undefined): string | null => {
+    if (!value) {
+      return null;
+    }
+
+    const normalized = value.startsWith('#') ? value : `#${value}`;
+
+    return /^#[0-9a-fA-F]{6}$/.test(normalized) ? normalized.toLowerCase() : null;
+  };
+
+  const swimmerColor = normalizeHexColor(mintValues.color) ?? normalizeHexColor(config.swimmerColor) ?? '#00cc63';
+
+  const tunaColor = normalizeHexColor(config.color);
+
   const [swimFrame, setSwimFrame] = useState(0);
+
   const [recoloredImages, setRecoloredImages] = useState<Map<string, string>>(new Map());
+
   const animationRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -518,21 +542,29 @@ export function DeploymentPreview({ config, lessonSlug, chapterSlug }: TDeployme
 
   useEffect(() => {
     let cancelled = false;
-    const hue = hexToHue(config.swimmerColor);
-    const tunaHue = config.color ? hexToHue(config.color) : undefined;
+
+    const hue = hexToHue(swimmerColor);
+
+    const tunaHue = tunaColor ? hexToHue(tunaColor) : undefined;
 
     const updateImage = (key: string, src: string, sourceHueRange: [number, number], targetHue: number) => {
       const img = new Image();
+
       img.onload = () => {
         if (cancelled) return;
+
         const recolored = recolorImageByHue(img, targetHue, sourceHueRange[0], sourceHueRange[1]);
+
         if (recolored) {
           setRecoloredImages((prev) => {
             const next = new Map(prev);
+
             next.set(key, recolored);
+
             return next;
           });
         }
+
         img.src = src;
       };
     };
@@ -548,8 +580,11 @@ export function DeploymentPreview({ config, lessonSlug, chapterSlug }: TDeployme
         if (!prev.has('tuna-can')) {
           return prev;
         }
+
         const next = new Map(prev);
+
         next.delete('tuna-can');
+
         return next;
       });
     }
@@ -557,19 +592,35 @@ export function DeploymentPreview({ config, lessonSlug, chapterSlug }: TDeployme
     return () => {
       cancelled = true;
     };
-  }, [config.swimmerColor, config.color]);
+  }, [swimmerColor, tunaColor]);
+
   const isTunaChapter = lessonSlug === 'ptb-and-items' && chapterSlug === 'deploy-tuna';
 
   const frameSequence = [1, 2, 3, 2];
+
   const frameIndex = frameSequence[swimFrame % frameSequence.length];
+
   const currentSwimImage =
     recoloredImages.get(`swimmer-frame-${frameIndex}`) || `/images/mint_water(${frameIndex}).png`;
+
+  const displayName = mintValues.name.trim() || 'Unnamed Swimmer';
+
+  const displaySpeed = Math.max(0, Math.floor(mintValues.speed));
+
+  const displayBoost = Math.max(0, Math.floor(mintValues.boost));
+
+  const displayDistance = Math.max(0, Math.floor(mintValues.distanceTraveled));
+
+  const displayHunger = Math.max(0, Math.floor(mintValues.hunger));
+
   return (
     <Card className="border-sky-200">
       <CardHeader>
-        <CardTitle className="text-lg">Deployment Preview</CardTitle>
+        <CardTitle className="text-lg">Minting Preview</CardTitle>
+
         <p className="text-sm text-gray-500">Confirm the configuration you will carry into the blockchain.</p>
       </CardHeader>
+
       <CardContent className="space-y-4 text-sm">
         <div className="flex justify-center">
           {!isTunaChapter ? (
@@ -588,20 +639,39 @@ export function DeploymentPreview({ config, lessonSlug, chapterSlug }: TDeployme
         </div>
         <div className="grid gap-4 sm:grid-cols-2 text-gray-600">
           <div>
-            <p className="text-xs uppercase tracking-wide text-gray-500">Launch Pad</p>
-            <p className="font-medium text-gray-900">{locationLabel}</p>
+            <p className="text-xs uppercase tracking-wide text-gray-500">Swimmer</p>
+            <p className="font-medium text-gray-900">{displayName}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-gray-500">Swimmer Color</p>
+            <div className="mt-1 flex items-center gap-2">
+              <span className="h-4 w-4 rounded-full border border-gray-300" style={{ backgroundColor: swimmerColor }} />
+              <span className="font-mono text-sm text-gray-900">{swimmerColor}</span>
+            </div>
           </div>
           <div>
             <p className="text-xs uppercase tracking-wide text-gray-500">Base Speed</p>
-            <p className="font-medium text-gray-900">{config.baseSpeed} m/hour</p>
+            <p className="font-medium text-gray-900">{displaySpeed} m/hour</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-gray-500">Boost</p>
+            <p className="font-medium text-gray-900">+{displayBoost} m</p>
           </div>
           <div>
             <p className="text-xs uppercase tracking-wide text-gray-500">Starting Distance</p>
-            <p className="font-medium text-gray-900">{config.startingDistance} m</p>
+            <p className="font-medium text-gray-900">{displayDistance} m</p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-wide text-gray-500">Sprint Bonus</p>
-            <p className="font-medium text-gray-900">+{config.sprintBonus} m</p>
+            <p className="text-xs uppercase tracking-wide text-gray-500">Hunger</p>
+            <p className="font-medium text-gray-900">{displayHunger}</p>
+          </div>
+          <div className="col-span-2">
+            <p className="text-xs uppercase tracking-wide text-gray-500">Package ID</p>
+            {packageId ? (
+              <p className="font-mono text-sm text-gray-900 break-all">{packageId}</p>
+            ) : (
+              <p className="text-sm text-gray-500">Not deployed yet</p>
+            )}
           </div>
         </div>
       </CardContent>
