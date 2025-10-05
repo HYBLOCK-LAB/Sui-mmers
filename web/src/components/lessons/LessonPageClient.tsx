@@ -8,14 +8,14 @@ import { LessonDescription } from '@/components/LessonDescription';
 import { getLessonRoute } from '@/lib/lessons';
 import { Transaction } from '@mysten/sui/transactions';
 import { useLessonNavigation } from '@/components/layout/LearningLayout';
-import { createDefaultDeploymentConfig, type DeploymentConfig, type MintSwimmerValues } from '@/components/lessons/DeploymentConfigurator';
+import { createDefaultDeploymentConfig, type TMintingConfig, type TMintSwimmerValues } from '@/components/lessons/DeploymentConfigurator';
 import { CodePlaygroundView, DeploymentWorkspaceView, LessonWorkspaceTabs } from '@/components/lessons/lesson-page';
 import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
 import { CLOCK_OBJECT_ID } from '@/lib/services/suiService';
 import { ApiMoveCompiler } from '@/lib/services/apiMoveCompiler';
 import { SuiClient, getFullnodeUrl } from '@mysten/sui/client';
 
-interface LessonPageClientProps {
+interface TLessonPageClientProps {
   lessonSlug: string;
   lessonTitle: string;
   chapterSlug: string;
@@ -34,7 +34,7 @@ interface LessonPageClientProps {
   previousChapterTitle?: string;
 }
 
-type WorkspaceTab = 'code' | 'preview';
+type TWorkspaceTab = 'code' | 'preview';
 
 export function LessonPageClient({
   lessonSlug,
@@ -53,10 +53,10 @@ export function LessonPageClient({
   previousLessonSlug,
   previousChapterSlug,
   previousChapterTitle,
-}: LessonPageClientProps) {
+}: TLessonPageClientProps) {
   const { setActive } = useLessonNavigation();
-  const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>('code');
-  const [deploymentConfig, setDeploymentConfig] = useState<DeploymentConfig>(() => createDefaultDeploymentConfig());
+  const [workspaceTab, setWorkspaceTab] = useState<TWorkspaceTab>('code');
+  const [deploymentConfig, setDeploymentConfig] = useState<TMintingConfig>(() => createDefaultDeploymentConfig());
   const [isDeploying, setIsDeploying] = useState(false);
   const [isMinting, setIsMinting] = useState(false);
   const currentAccount = useCurrentAccount();
@@ -149,7 +149,7 @@ export function LessonPageClient({
     fetchDeploymentHistory(currentAccount.address);
   }, [currentAccount?.address, fetchDeploymentHistory]);
 
-  const handleConfigChange = (updates: Partial<DeploymentConfig>) => {
+  const handleConfigChange = (updates: Partial<TMintingConfig>) => {
     setDeploymentConfig((prev) => ({ ...prev, ...updates }));
   };
 
@@ -160,7 +160,7 @@ export function LessonPageClient({
   const effectiveCodeSkeletone = isDeploymentChapter ? undefined : codeSkeletone;
   const effectiveReadOnly = isDeploymentChapter ? true : readOnly;
 
-  const tabClassName = (tab: WorkspaceTab) =>
+  const tabClassName = (tab: TWorkspaceTab) =>
     `flex-1 rounded-md border px-3 py-2 text-sm font-medium transition ${
       workspaceTab === tab
         ? 'border-emerald-200 bg-emerald-50 text-emerald-600 shadow-sm'
@@ -235,12 +235,10 @@ export function LessonPageClient({
     try {
       signAndExecute(
         {
-          transaction: {
-            ...transaction,
-            options: {
-              showObjectChanges: true, // Enable object changes to get package details
-              showEffects: true,
-            },
+          transaction,
+          options: {
+            showObjectChanges: true, // Enable object changes to get package details
+            showEffects: true,
           },
         },
         {
@@ -299,7 +297,7 @@ Package ID: ${deployedPackageId}`);
     [setSelectedPackageId]
   );
 
-  const handleMintSwimmer = async (values: MintSwimmerValues) => {
+  const handleMintSwimmer = async (values: TMintSwimmerValues) => {
     if (!packageId) {
       alert('Please deploy the smart contract first!');
       return;

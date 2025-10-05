@@ -11,7 +11,7 @@ const START_LOCATIONS = [
   { value: 'open_current', label: 'Open Current Drift' },
 ];
 
-export type DeploymentConfig = {
+export type TMintingConfig = {
   swimmerColor: string;
   color?: string;
   size?: 'small' | 'medium' | 'large';
@@ -21,7 +21,7 @@ export type DeploymentConfig = {
   sprintBonus: number;
 };
 
-export type MintSwimmerValues = {
+export type TMintSwimmerValues = {
   name: string;
   color: string;
   speed: number;
@@ -30,7 +30,7 @@ export type MintSwimmerValues = {
   distanceTraveled: number;
 };
 
-const BASE_DEPLOYMENT_CONFIG: DeploymentConfig = {
+const BASE_MINTING_CONFIG: TMintingConfig = {
   swimmerColor: '#00cc63',
   startingLocation: 'harbor_launch',
   startingDistance: 0,
@@ -39,7 +39,7 @@ const BASE_DEPLOYMENT_CONFIG: DeploymentConfig = {
   size: 'medium',
 };
 
-export const createDefaultDeploymentConfig = (): DeploymentConfig => ({ ...BASE_DEPLOYMENT_CONFIG });
+export const createDefaultDeploymentConfig = (): TMintingConfig => ({ ...BASE_MINTING_CONFIG });
 
 const toNumber = (value: string, fallback: number) => {
   const parsed = Number(value);
@@ -160,12 +160,12 @@ const hexToHue = (hex: string) => {
   return rgbToHue(rgb.r, rgb.g, rgb.b);
 };
 
-interface DeploymentConfiguratorProps {
-  config: DeploymentConfig;
-  onConfigChange: (updates: Partial<DeploymentConfig>) => void;
+interface TDeploymentConfiguratorProps {
+  config: TMintingConfig;
+  onConfigChange: (updates: Partial<TMintingConfig>) => void;
   lessonSlug?: string;
   chapterSlug?: string;
-  onMint?: (values: MintSwimmerValues) => void | Promise<void>;
+  onMint?: (values: TMintSwimmerValues) => void | Promise<void>;
   isMinting?: boolean;
   mintDisabled?: boolean;
   packageId?: string | null;
@@ -180,11 +180,11 @@ export function DeploymentConfigurator({
   isMinting,
   mintDisabled,
   packageId,
-}: DeploymentConfiguratorProps) {
+}: TDeploymentConfiguratorProps) {
   const isTunaChapter = lessonSlug === 'ptb-and-items' && chapterSlug === 'deploy-tuna';
 
   const buildDefaultMintValues = useCallback(
-    (): MintSwimmerValues => ({
+    (): TMintSwimmerValues => ({
       name: 'My Swimmer',
       color: config.swimmerColor,
       speed: config.baseSpeed,
@@ -195,28 +195,86 @@ export function DeploymentConfigurator({
     [config.baseSpeed, config.sprintBonus, config.startingDistance, config.swimmerColor]
   );
 
-  const [mintValues, setMintValues] = useState<MintSwimmerValues>(() => buildDefaultMintValues());
+  const [mintValues, setMintValues] = useState<TMintSwimmerValues>(() => buildDefaultMintValues());
 
   useEffect(() => {
     setMintValues(buildDefaultMintValues());
   }, [buildDefaultMintValues, lessonSlug, chapterSlug]);
 
-  const updateConfig = (updates: Partial<DeploymentConfig>) => {
+  const updateConfig = (updates: Partial<TMintingConfig>) => {
     onConfigChange(updates);
+
+    const hasSwimmerColor = Object.prototype.hasOwnProperty.call(updates, 'swimmerColor');
+    const hasBaseSpeed = Object.prototype.hasOwnProperty.call(updates, 'baseSpeed');
+    const hasSprintBonus = Object.prototype.hasOwnProperty.call(updates, 'sprintBonus');
+    const hasStartingDistance = Object.prototype.hasOwnProperty.call(updates, 'startingDistance');
+
+    if (hasSwimmerColor || hasBaseSpeed || hasSprintBonus || hasStartingDistance) {
+      setMintValues((prev) => {
+        let hasChanges = false;
+        const next = { ...prev };
+
+        if (hasSwimmerColor) {
+          const nextColor = updates.swimmerColor ?? prev.color;
+          if (nextColor !== prev.color) {
+            next.color = nextColor;
+            hasChanges = true;
+          }
+        }
+        if (hasBaseSpeed) {
+          const nextSpeed = updates.baseSpeed ?? prev.speed;
+          if (nextSpeed !== prev.speed) {
+            next.speed = nextSpeed;
+            hasChanges = true;
+          }
+        }
+        if (hasSprintBonus) {
+          const nextBoost = updates.sprintBonus ?? prev.boost;
+          if (nextBoost !== prev.boost) {
+            next.boost = nextBoost;
+            hasChanges = true;
+          }
+        }
+        if (hasStartingDistance) {
+          const nextDistance = updates.startingDistance ?? prev.distanceTraveled;
+          if (nextDistance !== prev.distanceTraveled) {
+            next.distanceTraveled = nextDistance;
+            hasChanges = true;
+          }
+        }
+
+        return hasChanges ? next : prev;
+      });
+    }
   };
 
   const handleMintTextFieldChange = (field: 'name' | 'color') => (event: ChangeEvent<HTMLInputElement>) => {
     const { value } = event.target;
     setMintValues((prev) => ({ ...prev, [field]: value }));
+
+    if (field === 'color') {
+      updateConfig({ swimmerColor: value });
+    }
   };
 
   const handleMintNumberFieldChange =
     (field: 'speed' | 'hunger' | 'boost' | 'distanceTraveled') => (event: ChangeEvent<HTMLInputElement>) => {
       const { value } = event.target;
-      setMintValues((prev) => ({
-        ...prev,
-        [field]: Math.max(0, toNumber(value, prev[field] as number)),
-      }));
+      const fallback = mintValues[field] as number;
+      const numericValue = Math.max(0, toNumber(value, fallback));
+
+      if (field === 'hunger') {
+        setMintValues((prev) => ({ ...prev, hunger: numericValue }));
+        return;
+      }
+
+      if (field === 'speed') {
+        updateConfig({ baseSpeed: numericValue });
+      } else if (field === 'boost') {
+        updateConfig({ sprintBonus: numericValue });
+      } else if (field === 'distanceTraveled') {
+        updateConfig({ startingDistance: numericValue });
+      }
     };
 
   const packageReady = Boolean(packageId);
@@ -238,7 +296,7 @@ export function DeploymentConfigurator({
       return;
     }
 
-    const payload: MintSwimmerValues = {
+    const payload: TMintSwimmerValues = {
       name: mintValues.name.trim(),
       color: (mintValues.color || config.swimmerColor || '#00cc63').trim(),
       speed: Math.max(0, Math.floor(mintValues.speed)),
@@ -433,13 +491,13 @@ export function DeploymentConfigurator({
   );
 }
 
-interface DeploymentPreviewProps {
-  config: DeploymentConfig;
+interface TDeploymentPreviewProps {
+  config: TMintingConfig;
   lessonSlug?: string;
   chapterSlug?: string;
 }
 
-export function DeploymentPreview({ config, lessonSlug, chapterSlug }: DeploymentPreviewProps) {
+export function DeploymentPreview({ config, lessonSlug, chapterSlug }: TDeploymentPreviewProps) {
   const locationLabel = useMemo(() => getLocationLabel(config.startingLocation), [config.startingLocation]);
 
   const [swimFrame, setSwimFrame] = useState(0);

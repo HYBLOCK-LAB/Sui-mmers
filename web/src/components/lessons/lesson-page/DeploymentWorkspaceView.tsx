@@ -1,13 +1,13 @@
 ﻿'use client';
 
-import { DeploymentConfigurator, DeploymentPreview, type DeploymentConfig, type MintSwimmerValues } from '@/components/lessons/DeploymentConfigurator';
+import { DeploymentConfigurator, DeploymentPreview, type TMintingConfig, type TMintSwimmerValues } from '@/components/lessons/DeploymentConfigurator';
 
-interface DeploymentWorkspaceViewProps {
-  config: DeploymentConfig;
-  onConfigChange: (updates: Partial<DeploymentConfig>) => void;
+interface TDeploymentWorkspaceViewProps {
+  config: TMintingConfig;
+  onConfigChange: (updates: Partial<TMintingConfig>) => void;
   lessonSlug: string;
   chapterSlug: string;
-  onMint: (values: MintSwimmerValues) => void | Promise<void>;
+  onMint: (values: TMintSwimmerValues) => void | Promise<void>;
   isMinting: boolean;
   mintDisabled: boolean;
   packageId: string | null;
@@ -22,7 +22,7 @@ export function DeploymentWorkspaceView({
   isMinting,
   mintDisabled,
   packageId,
-}: DeploymentWorkspaceViewProps) {
+}: TDeploymentWorkspaceViewProps) {
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] items-start">
       <DeploymentConfigurator
