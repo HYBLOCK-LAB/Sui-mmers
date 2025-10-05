@@ -9,10 +9,10 @@ import { getLessonRoute } from '@/lib/lessons';
 import { Transaction } from '@mysten/sui/transactions';
 import { useLessonNavigation } from '@/components/layout/LearningLayout';
 import {
-  createDefaultDeploymentConfig,
+  createDefaultMintingConfig,
   type TMintingConfig,
   type TMintSwimmerValues,
-} from '@/components/lessons/DeploymentConfigurator';
+} from '@/components/lessons/MintingConfigurator';
 import { CodePlaygroundView, DeploymentWorkspaceView, LessonWorkspaceTabs } from '@/components/lessons/lesson-page';
 import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
 import { CLOCK_OBJECT_ID } from '@/lib/services/suiService';
@@ -60,7 +60,7 @@ export function LessonPageClient({
 }: TLessonPageClientProps) {
   const { setActive } = useLessonNavigation();
   const [workspaceTab, setWorkspaceTab] = useState<TWorkspaceTab>('code');
-  const [deploymentConfig, setDeploymentConfig] = useState<TMintingConfig>(() => createDefaultDeploymentConfig());
+  const [mintingConfig, setMintingConfig] = useState<TMintingConfig>(() => createDefaultMintingConfig());
   const [isDeploying, setIsDeploying] = useState(false);
   const [isMinting, setIsMinting] = useState(false);
   const currentAccount = useCurrentAccount();
@@ -80,7 +80,7 @@ export function LessonPageClient({
   useEffect(() => {
     setWorkspaceTab('code');
     if (isDeploymentChapter) {
-      setDeploymentConfig(createDefaultDeploymentConfig());
+      setMintingConfig(createDefaultMintingConfig());
     }
   }, [lessonSlug, chapterSlug, isDeploymentChapter]);
 
@@ -154,7 +154,7 @@ export function LessonPageClient({
   }, [currentAccount?.address, fetchDeploymentHistory]);
 
   const handleConfigChange = (updates: Partial<TMintingConfig>) => {
-    setDeploymentConfig((prev) => ({ ...prev, ...updates }));
+    setMintingConfig((prev) => ({ ...prev, ...updates }));
   };
 
   const nextHref = nextLessonSlug && nextChapterSlug ? getLessonRoute(nextLessonSlug, nextChapterSlug) : null;
@@ -311,7 +311,7 @@ Package ID: ${deployedPackageId}`);
 
     const sanitizedName = values.name.trim();
     const sanitizedColorInput = values.color.trim();
-    const sanitizedColor = sanitizedColorInput || deploymentConfig.swimmerColor || '#00cc63';
+    const sanitizedColor = sanitizedColorInput || mintingConfig.swimmerColor || '#00cc63';
 
     if (!sanitizedName) {
       alert('Please enter a swimmer name first!');
@@ -404,7 +404,7 @@ Package ID: ${deployedPackageId}`);
               />
             ) : (
               <DeploymentWorkspaceView
-                config={deploymentConfig}
+                config={mintingConfig}
                 onConfigChange={handleConfigChange}
                 lessonSlug={lessonSlug}
                 chapterSlug={chapterSlug}

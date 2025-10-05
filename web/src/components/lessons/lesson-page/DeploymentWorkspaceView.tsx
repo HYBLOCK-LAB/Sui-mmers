@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import { useEffect, useState } from 'react';
-import { DeploymentConfigurator, DeploymentPreview, type TMintingConfig, type TMintSwimmerValues } from '@/components/lessons/DeploymentConfigurator';
+import { MintingConfigurator, MintingPreview, type TMintingConfig, type TMintSwimmerValues } from '@/components/lessons/MintingConfigurator';
 
 interface TDeploymentWorkspaceViewProps {
   config: TMintingConfig;
@@ -58,7 +58,7 @@ export function DeploymentWorkspaceView({
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] items-start">
-      <DeploymentConfigurator
+      <MintingConfigurator
         config={config}
         onConfigChange={onConfigChange}
         lessonSlug={lessonSlug}
@@ -70,7 +70,7 @@ export function DeploymentWorkspaceView({
         mintValues={mintValues}
         onMintValuesChange={handleMintValuesChange}
       />
-      <DeploymentPreview
+      <MintingPreview
         config={config}
         mintValues={mintValues}
         lessonSlug={lessonSlug}

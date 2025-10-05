@@ -39,7 +39,7 @@ const BASE_MINTING_CONFIG: TMintingConfig = {
   size: 'medium',
 };
 
-export const createDefaultDeploymentConfig = (): TMintingConfig => ({ ...BASE_MINTING_CONFIG });
+export const createDefaultMintingConfig = (): TMintingConfig => ({ ...BASE_MINTING_CONFIG });
 
 const toNumber = (value: string, fallback: number) => {
   const parsed = Number(value);
@@ -160,7 +160,7 @@ const hexToHue = (hex: string) => {
   return rgbToHue(rgb.r, rgb.g, rgb.b);
 };
 
-interface TDeploymentConfiguratorProps {
+interface TMintingConfiguratorProps {
   config: TMintingConfig;
   onConfigChange: (updates: Partial<TMintingConfig>) => void;
   lessonSlug?: string;
@@ -173,7 +173,7 @@ interface TDeploymentConfiguratorProps {
   onMintValuesChange: (updater: (prev: TMintSwimmerValues) => TMintSwimmerValues) => void;
 }
 
-export function DeploymentConfigurator({
+export function MintingConfigurator({
   config,
 
   onConfigChange,
@@ -193,7 +193,7 @@ export function DeploymentConfigurator({
   mintValues,
 
   onMintValuesChange,
-}: TDeploymentConfiguratorProps) {
+}: TMintingConfiguratorProps) {
   const isTunaChapter = lessonSlug === 'ptb-and-items' && chapterSlug === 'deploy-tuna';
 
   const updateConfig = (updates: Partial<TMintingConfig>) => {
@@ -493,7 +493,7 @@ export function DeploymentConfigurator({
   );
 }
 
-interface TDeploymentPreviewProps {
+interface TMintingPreviewProps {
   config: TMintingConfig;
 
   mintValues: TMintSwimmerValues;
@@ -505,7 +505,7 @@ interface TDeploymentPreviewProps {
   packageId?: string | null;
 }
 
-export function DeploymentPreview({ config, mintValues, lessonSlug, chapterSlug, packageId }: TDeploymentPreviewProps) {
+export function MintingPreview({ config, mintValues, lessonSlug, chapterSlug, packageId }: TMintingPreviewProps) {
   const locationLabel = useMemo(() => getLocationLabel(config.startingLocation), [config.startingLocation]);
 
   const normalizeHexColor = (value: string | undefined): string | null => {
