@@ -1,9 +1,9 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
 import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
 import { Transaction } from '@mysten/sui/transactions';
+import Swal from 'sweetalert2';
 import { LearningLayout } from '@/components/layout/LearningLayout';
 import { WalletConnect } from '@/components/WalletConnect';
 import { SwimmingPool } from '@/components/SwimmingPool';
@@ -37,7 +37,7 @@ function GameplayContent() {
   // 항상 모든 Hook을 호출 (React Hook 규칙)
   const realAccount = useCurrentAccount();
   const { mutate: signAndExecute } = useSignAndExecuteTransaction();
-  
+
   // 실제 지갑 또는 Mock 지갑 선택
   const currentAccount = isMockMode ? mockCurrentAccount : realAccount;
   const [suiService] = useState(() => new SuiService('testnet'));
@@ -75,56 +75,51 @@ function GameplayContent() {
     return null;
   };
 
-  const fetchPackageIdByDigest = useCallback(
-    async (digest: string | undefined | null) => {
-      if (!digest) return null;
-      const network = process.env.NEXT_PUBLIC_SUI_NETWORK ?? 'testnet';
-      const client = new SuiClient({ url: getFullnodeUrl(network) });
-      const maxAttempts = 5;
-      const retryDelayMs = 1000;
+  const fetchPackageIdByDigest = useCallback(async (digest: string | undefined | null) => {
+    if (!digest) return null;
+    const network = process.env.NEXT_PUBLIC_SUI_NETWORK ?? 'testnet';
+    const client = new SuiClient({ url: getFullnodeUrl(network) });
+    const maxAttempts = 5;
+    const retryDelayMs = 1000;
 
-      for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-        try {
-          const txResult = await client.getTransactionBlock({
-            digest,
-            options: {
-              showObjectChanges: true,
-              showEffects: true,
-            },
-          });
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      try {
+        const txResult = await client.getTransactionBlock({
+          digest,
+          options: {
+            showObjectChanges: true,
+            showEffects: true,
+          },
+        });
 
-          const fromObjectChanges = extractPackageIdFromObjectChanges(txResult.objectChanges as any[]);
-          if (fromObjectChanges) {
-            return fromObjectChanges;
-          }
-
-          const created = txResult.effects?.created ?? [];
-          for (const item of created as any[]) {
-            if (item?.owner && typeof item.owner === 'object' && 'Immutable' in item.owner) {
-              return item.reference?.objectId ?? null;
-            }
-          }
-        } catch (error) {
-          const message = (error as Error)?.message ?? String(error);
-          if (!message.includes('Could not find the referenced transaction')) {
-            console.error('[Gameplay] failed to fetch package id by digest', error);
-            return null;
-          }
-          console.warn(
-            `[Gameplay] transaction not yet available, retrying... (attempt ${attempt + 1}/${maxAttempts})`
-          );
+        const fromObjectChanges = extractPackageIdFromObjectChanges(txResult.objectChanges as any[]);
+        if (fromObjectChanges) {
+          return fromObjectChanges;
         }
 
-        if (attempt < maxAttempts - 1) {
-          await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+        const created = txResult.effects?.created ?? [];
+        for (const item of created as any[]) {
+          if (item?.owner && typeof item.owner === 'object' && 'Immutable' in item.owner) {
+            return item.reference?.objectId ?? null;
+          }
         }
+      } catch (error) {
+        const message = (error as Error)?.message ?? String(error);
+        if (!message.includes('Could not find the referenced transaction')) {
+          console.error('[Gameplay] failed to fetch package id by digest', error);
+          return null;
+        }
+        console.warn(`[Gameplay] transaction not yet available, retrying... (attempt ${attempt + 1}/${maxAttempts})`);
       }
 
-      console.warn('[Gameplay] package id not found after all retries');
-      return null;
-    },
-    []
-  );
+      if (attempt < maxAttempts - 1) {
+        await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+      }
+    }
+
+    console.warn('[Gameplay] package id not found after all retries');
+    return null;
+  }, []);
 
   // Mock 데이터
   const mockSwimmers: SwimmerSummary[] = [
@@ -189,6 +184,24 @@ function GameplayContent() {
     }
   }, [isMockMode]);
 
+  // Fetch deployment history for a given address
+  const fetchDeploymentHistory = useCallback(async (address: string) => {
+    try {
+      const response = await fetch(`/api/deployments/history?walletAddress=${address}`);
+      if (!response.ok) {
+        const message = await response.text();
+        console.warn('[Gameplay] failed to fetch deployment history', message);
+        setDeploymentHistory([]);
+        return;
+      }
+      const history: StoredDeployment[] = await response.json();
+      setDeploymentHistory(history);
+    } catch (error) {
+      console.error('[Gameplay] error fetching deployment history', error);
+      setDeploymentHistory([]);
+    }
+  }, []);
+
   const handlePackageDeployed = useCallback(
     (id: string) => {
       setSelectedPackageId(id);
@@ -202,7 +215,7 @@ function GameplayContent() {
         });
       }
     },
-    [currentAccount?.address, fetchDeploymentHistory, isMockMode, persistPackageToSupabase, setSelectedPackageId]
+    [currentAccount?.address, fetchDeploymentHistory, isMockMode, setSelectedPackageId]
   );
 
   // 실제 모드 데이터 로드
@@ -259,11 +272,13 @@ function GameplayContent() {
     const interval = setInterval(() => {
       console.log('🎭 Mock mode: auto-updating data');
       // 실제 게임처럼 시간에 따른 거리 증가 시뮬레이션
-      setSwimmers(prev => prev.map(swimmer => ({
-        ...swimmer,
-        distanceTraveled: swimmer.distanceTraveled + Math.floor(swimmer.baseSpeedPerHour / 12), // 5분당 증가
-        lastUpdateTimestampMs: Date.now()
-      })));
+      setSwimmers((prev) =>
+        prev.map((swimmer) => ({
+          ...swimmer,
+          distanceTraveled: swimmer.distanceTraveled + Math.floor(swimmer.baseSpeedPerHour / 12), // 5분당 증가
+          lastUpdateTimestampMs: Date.now(),
+        }))
+      );
     }, 6000); // 6초마다 업데이트
 
     return () => clearInterval(interval);
@@ -376,24 +391,32 @@ function GameplayContent() {
   const handleCompileAndDeploy = async (transaction: any) => {
     if (isMockMode) {
       console.log('🎭 Mock mode: compile and deploy not supported');
-      alert('Compile and deploy are unavailable in mock mode.');
+      Swal.fire({
+        icon: 'info',
+        title: 'Mock mode active',
+        text: 'Compile and deploy are unavailable while mock mode is enabled.',
+      });
       return;
     }
 
     if (!currentAccount) {
-      alert('Please connect your wallet first!');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Connect your wallet',
+        text: 'Please connect your wallet first.',
+      });
       return;
     }
 
     setIsDeploying(true);
     try {
       signAndExecute(
-        { 
+        {
           transaction,
           options: {
-            showObjectChanges: true,  // Enable object changes to get package details
+            showObjectChanges: true, // Enable object changes to get package details
             showEffects: true,
-          }
+          },
         },
         {
           onSuccess: async (result) => {
@@ -410,22 +433,39 @@ function GameplayContent() {
               ApiMoveCompiler.persistDeploymentResult(transaction, deployedPackageId).catch((error) => {
                 console.error('[Gameplay] async Supabase persist error', error);
               });
-            alert(`🚀 Package deployed successfully!\n\nPackage ID: ${deployedPackageId}`);
+              Swal.fire({
+                icon: 'success',
+                title: 'Package deployed',
+                html: `<p>🚀 Package deployed successfully!</p><p><code>${deployedPackageId}</code></p>`,
+                confirmButtonText: 'Nice!',
+              });
             } else {
               console.log('[Gameplay] could not determine package id');
-              alert('🎉 Transaction succeeded! However, package ID could not be determined.');
+              Swal.fire({
+                icon: 'info',
+                title: 'Transaction succeeded',
+                text: 'However, the package ID could not be determined.',
+              });
             }
             fetchSwimmers();
           },
           onError: (error) => {
             console.error('Transaction failed:', error);
-            alert('Transaction failed: ' + error.message);
+            Swal.fire({
+              icon: 'error',
+              title: 'Transaction failed',
+              text: (error as Error)?.message ?? String(error),
+            });
           },
         }
       );
     } catch (error) {
       console.error('Failed to execute transaction:', error);
-      alert('Failed to execute transaction: ' + (error as Error).message);
+      Swal.fire({
+        icon: 'error',
+        title: 'Failed to execute transaction',
+        text: (error as Error)?.message ?? 'Unknown error occurred.',
+      });
     } finally {
       setIsDeploying(false);
     }
@@ -446,16 +486,24 @@ function GameplayContent() {
           lastUpdateTimestampMs: Date.now(),
         };
 
-        setSwimmers(prev => [...prev, newSwimmer]);
+        setSwimmers((prev) => [...prev, newSwimmer]);
         setSelectedSwimmerId(newSwimmer.id);
-        alert('🎉 A new Swimmer NFT has arrived! (Mock mode)');
+        Swal.fire({
+          icon: 'success',
+          title: 'Swimmer minted (mock)',
+          text: 'A new Swimmer NFT has been added in mock mode.',
+        });
         setIsMinting(false);
       }, 1000);
       return;
     }
 
     if (!packageId) {
-      alert('Please deploy the smart contract first!');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Deployment required',
+        text: 'Please deploy the smart contract first.',
+      });
       return;
     }
 
@@ -473,18 +521,30 @@ function GameplayContent() {
         },
         {
           onSuccess: () => {
-            alert('🎉 A new Swimmer NFT has arrived!');
+            Swal.fire({
+              icon: 'success',
+              title: 'Swimmer minted',
+              text: 'A new Swimmer NFT has arrived!',
+            });
             fetchSwimmers();
           },
           onError: (error) => {
             console.error('Transaction failed:', error);
-            alert('Transaction failed: ' + error.message);
+            Swal.fire({
+              icon: 'error',
+              title: 'Transaction failed',
+              text: (error as Error)?.message ?? String(error),
+            });
           },
         }
       );
     } catch (error) {
       console.error('Failed to create swimmer:', error);
-      alert('Failed to create swimmer!');
+      Swal.fire({
+        icon: 'error',
+        title: 'Failed to create swimmer',
+        text: 'Please try again in a moment.',
+      });
     } finally {
       setIsMinting(false);
     }
@@ -498,41 +558,59 @@ function GameplayContent() {
       setActionLoading('update');
 
       setTimeout(() => {
-        const selectedSwimmer = mockSwimmers.find(s => s.id === selectedSwimmerId);
+        const selectedSwimmer = mockSwimmers.find((s) => s.id === selectedSwimmerId);
         if (!selectedSwimmer) return;
 
         // Calculate distance based on elapsed time (5 minutes = 300 seconds)
         const timeDiff = 300; // 5 minutes
         const distanceIncrease = (selectedSwimmer.baseSpeedPerHour * timeDiff) / 3600;
 
-        setSwimmers(prev => prev.map(swimmer =>
-          swimmer.id === selectedSwimmerId
-            ? {
-                ...swimmer,
-                distanceTraveled: swimmer.distanceTraveled + Math.round(distanceIncrease),
-                lastUpdateTimestampMs: Date.now()
-              }
-            : swimmer
-        ));
+        setSwimmers((prev) =>
+          prev.map((swimmer) =>
+            swimmer.id === selectedSwimmerId
+              ? {
+                  ...swimmer,
+                  distanceTraveled: swimmer.distanceTraveled + Math.round(distanceIncrease),
+                  lastUpdateTimestampMs: Date.now(),
+                }
+              : swimmer
+          )
+        );
 
-        alert('⏱ The swimmer advanced automatically! (Mock mode)');
+        Swal.fire({
+          icon: 'info',
+          title: 'Progress updated (mock)',
+          text: 'The swimmer advanced automatically in mock mode.',
+        });
         setActionLoading(null);
       }, 600);
       return;
     }
 
     if (!currentAccount) {
-      alert('Please connect your wallet first!');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Connect your wallet',
+        text: 'Please connect your wallet first.',
+      });
       return;
     }
 
     if (!packageId) {
-      alert('Please deploy the smart contract first!');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Deployment required',
+        text: 'Please deploy the smart contract first.',
+      });
       return;
     }
 
     if (!selectedSwimmerId) {
-      alert('Please select a swimmer to update!');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Select a swimmer',
+        text: 'Please select a swimmer to update first.',
+      });
       return;
     }
 
@@ -550,20 +628,32 @@ function GameplayContent() {
         },
         {
           onSuccess: () => {
-            alert('⏱ The swimmer advanced automatically!');
+            Swal.fire({
+              icon: 'success',
+              title: 'Progress updated',
+              text: 'The swimmer advanced automatically!',
+            });
             fetchSwimmers();
             setActionLoading(null);
           },
           onError: (error) => {
             console.error('Update progress failed:', error);
-            alert('Update failed: ' + error.message);
+            Swal.fire({
+              icon: 'error',
+              title: 'Update failed',
+              text: (error as Error)?.message ?? String(error),
+            });
             setActionLoading(null);
           },
         }
       );
     } catch (error) {
       console.error('Failed to update progress:', error);
-      alert('Update failed: ' + (error as Error).message);
+      Swal.fire({
+        icon: 'error',
+        title: 'Update failed',
+        text: (error as Error)?.message ?? 'Unknown error occurred.',
+      });
       setActionLoading(null);
     }
   };
@@ -579,9 +669,13 @@ function GameplayContent() {
           energy: Math.floor(Math.random() * 15) + 15, // 15-30 사이 랜덤
         };
 
-        setTunaCans(prev => [...prev, newTuna]);
+        setTunaCans((prev) => [...prev, newTuna]);
         setSelectedTunaId(newTuna.id);
-        alert('🍣 A new TunaCan has been added to your inventory! (Mock mode)');
+        Swal.fire({
+          icon: 'success',
+          title: 'TunaCan minted (mock)',
+          text: 'A new TunaCan has been added to your inventory in mock mode.',
+        });
         setActionLoading(null);
       }, 800);
       return;
@@ -600,20 +694,32 @@ function GameplayContent() {
         },
         {
           onSuccess: () => {
-            alert('🍣 A TunaCan has been added to your inventory!');
+            Swal.fire({
+              icon: 'success',
+              title: 'TunaCan minted',
+              text: 'A TunaCan has been added to your inventory!',
+            });
             fetchTunaCans();
             setActionLoading(null);
           },
           onError: (error) => {
             console.error('Mint tuna failed:', error);
-            alert('Tuna mint failed: ' + error.message);
+            Swal.fire({
+              icon: 'error',
+              title: 'Minting failed',
+              text: (error as Error)?.message ?? String(error),
+            });
             setActionLoading(null);
           },
         }
       );
     } catch (error) {
       console.error('Failed to mint tuna:', error);
-      alert('Tuna mint failed: ' + (error as Error).message);
+      Swal.fire({
+        icon: 'error',
+        title: 'Minting failed',
+        text: (error as Error)?.message ?? 'Unknown error occurred.',
+      });
       setActionLoading(null);
     }
   };
@@ -626,50 +732,72 @@ function GameplayContent() {
       setActionLoading('eatTuna');
 
       setTimeout(() => {
-        const selectedTuna = mockTunaCans.find(t => t.id === selectedTunaId);
+        const selectedTuna = mockTunaCans.find((t) => t.id === selectedTunaId);
         if (!selectedTuna) return;
 
         // Swimmer 거리 증가
-        setSwimmers(prev => prev.map(swimmer =>
-          swimmer.id === selectedSwimmerId
-            ? { ...swimmer, distanceTraveled: swimmer.distanceTraveled + selectedTuna.energy }
-            : swimmer
-        ));
+        setSwimmers((prev) =>
+          prev.map((swimmer) =>
+            swimmer.id === selectedSwimmerId
+              ? { ...swimmer, distanceTraveled: swimmer.distanceTraveled + selectedTuna.energy }
+              : swimmer
+          )
+        );
 
         // TunaCan 제거
-        setTunaCans(prev => prev.filter(tuna => tuna.id !== selectedTunaId));
+        setTunaCans((prev) => prev.filter((tuna) => tuna.id !== selectedTunaId));
 
         // 새로운 TunaCan 선택
-        const remainingTunas = mockTunaCans.filter(t => t.id !== selectedTunaId);
+        const remainingTunas = mockTunaCans.filter((t) => t.id !== selectedTunaId);
         if (remainingTunas.length > 0) {
           setSelectedTunaId(remainingTunas[0].id);
         } else {
           setSelectedTunaId('');
         }
 
-        alert('🍽 The swimmer ate a TunaCan and gained energy! (Mock mode)');
+        Swal.fire({
+          icon: 'success',
+          title: 'Swimmer fed (mock)',
+          text: 'The swimmer ate a TunaCan and gained energy in mock mode.',
+        });
         setActionLoading(null);
       }, 1200);
       return;
     }
 
     if (!currentAccount) {
-      alert('Please connect your wallet first!');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Connect your wallet',
+        text: 'Please connect your wallet first.',
+      });
       return;
     }
 
     if (!packageId) {
-      alert('Please deploy the smart contract first!');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Deployment required',
+        text: 'Please deploy the smart contract first.',
+      });
       return;
     }
 
     if (!selectedSwimmerId) {
-      alert('Please select a swimmer to feed!');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Select a swimmer',
+        text: 'Please select a swimmer to feed first.',
+      });
       return;
     }
 
     if (!selectedTunaId) {
-      alert('Please mint a TunaCan first!');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Mint a TunaCan',
+        text: 'Please mint a TunaCan first.',
+      });
       return;
     }
 
@@ -687,21 +815,33 @@ function GameplayContent() {
         },
         {
           onSuccess: () => {
-            alert('💪 Distance increased thanks to the TunaCan bonus!');
+            Swal.fire({
+              icon: 'success',
+              title: 'Distance increased',
+              text: 'Distance increased thanks to the TunaCan bonus!',
+            });
             fetchSwimmers();
             fetchTunaCans();
             setActionLoading(null);
           },
           onError: (error) => {
             console.error('Eat tuna failed:', error);
-            alert('Feeding failed: ' + error.message);
+            Swal.fire({
+              icon: 'error',
+              title: 'Feeding failed',
+              text: (error as Error)?.message ?? String(error),
+            });
             setActionLoading(null);
           },
         }
       );
     } catch (error) {
       console.error('Failed to eat tuna:', error);
-      alert('Feeding failed: ' + (error as Error).message);
+      Swal.fire({
+        icon: 'error',
+        title: 'Feeding failed',
+        text: (error as Error)?.message ?? 'Unknown error occurred.',
+      });
       setActionLoading(null);
     }
   };
@@ -766,8 +906,7 @@ function GameplayContent() {
             <p className="mt-1 text-sm text-gray-600">
               {isMockMode
                 ? 'Try every gameplay feature without touching the blockchain.'
-                : 'Combine auto-progress and item usage safely with programmable transaction blocks.'
-              }
+                : 'Combine auto-progress and item usage safely with programmable transaction blocks.'}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -775,22 +914,27 @@ function GameplayContent() {
               📘 View Course
             </Button>
             {/* 지갑 상태 표시 */}
-            <div className={`border rounded-lg px-4 py-2 ${
-              currentAccount ? 'bg-green-100 border-green-300' : 'bg-gray-100 border-gray-300'
-            }`}>
+            <div
+              className={`border rounded-lg px-4 py-2 ${
+                currentAccount ? 'bg-green-100 border-green-300' : 'bg-gray-100 border-gray-300'
+              }`}
+            >
               <div className="flex items-center gap-2">
                 <span className={currentAccount ? 'text-green-600' : 'text-gray-600'}>
                   {currentAccount ? '🟢' : '⚪'}
                 </span>
                 <div className="text-sm">
                   <div className={`font-medium ${currentAccount ? 'text-green-800' : 'text-gray-800'}`}>
-                    {isMockMode ? 'Mock wallet connected' : (currentAccount ? 'Wallet connected' : 'Wallet not connected')}
+                    {isMockMode
+                      ? 'Mock wallet connected'
+                      : currentAccount
+                      ? 'Wallet connected'
+                      : 'Wallet not connected'}
                   </div>
                   <div className={`font-mono ${currentAccount ? 'text-green-600' : 'text-gray-600'}`}>
                     {currentAccount?.address
                       ? `${currentAccount.address.slice(0, 6)}...${currentAccount.address.slice(-4)}`
-                      : 'Connection required'
-                    }
+                      : 'Connection required'}
                   </div>
                 </div>
               </div>
@@ -819,7 +963,7 @@ function GameplayContent() {
           <div className="rounded-xl border border-purple-100 bg-purple-50/80 px-5 py-4">
             <p className="text-xs uppercase text-purple-600 font-semibold">Package Status</p>
             <p className="mt-2 text-sm text-gray-800">
-              {isMockMode ? '✅ Mock mode: ready' : (packageId ? '✅ Ready' : 'Deployment required')}
+              {isMockMode ? '✅ Mock mode: ready' : packageId ? '✅ Ready' : 'Deployment required'}
             </p>
             {packageId && <p className="mt-1 text-xs font-mono text-gray-500 break-all">{packageId}</p>}
           </div>

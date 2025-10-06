@@ -7,6 +7,7 @@ import type { StoredDeployment } from '@/components/CodeEditor';
 import { LessonDescription } from '@/components/LessonDescription';
 import { getLessonRoute } from '@/lib/lessons';
 import { Transaction } from '@mysten/sui/transactions';
+import Swal from 'sweetalert2';
 import { useLessonNavigation } from '@/components/layout/LearningLayout';
 import {
   createDefaultMintingConfig,
@@ -231,7 +232,11 @@ export function LessonPageClient({
 
   const handleCompileAndDeploy = async (transaction: any) => {
     if (!currentAccount) {
-      alert('Please connect your wallet first!');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Connect your wallet',
+        text: 'Please connect your wallet first.',
+      });
       return;
     }
 
@@ -239,12 +244,10 @@ export function LessonPageClient({
     try {
       signAndExecute(
         {
-          transaction: {
-            ...transaction,
-            options: {
-              showObjectChanges: true, // Enable object changes to get package details
-              showEffects: true,
-            },
+          transaction,
+          options: {
+            showObjectChanges: true, // Enable object changes to get package details
+            showEffects: true,
           },
         },
         {
@@ -263,23 +266,38 @@ export function LessonPageClient({
               ApiMoveCompiler.persistDeploymentResult(transaction, deployedPackageId).catch((error) => {
                 console.error('[LessonPageClient] async Supabase persist error', error);
               });
-              alert(`Package deployed successfully!
-
-Package ID: ${deployedPackageId}`);
+              Swal.fire({
+                icon: 'success',
+                title: 'Package deployed',
+                html: `<p>🚀 Package deployed successfully!</p><p><code>${deployedPackageId}</code></p>`,
+                confirmButtonText: 'Nice!',
+              });
             } else {
               console.log('[LessonPageClient] could not determine package id');
-              alert('Transaction succeeded! However, package ID could not be determined.');
+              Swal.fire({
+                icon: 'info',
+                title: 'Transaction succeeded',
+                text: 'However, the package ID could not be determined.',
+              });
             }
           },
           onError: (error) => {
             console.error('Transaction failed:', error);
-            alert('Transaction failed: ' + error.message);
+            Swal.fire({
+              icon: 'error',
+              title: 'Transaction failed',
+              text: (error as Error)?.message ?? String(error),
+            });
           },
         }
       );
     } catch (error) {
       console.error('Failed to execute transaction:', error);
-      alert('Failed to execute transaction: ' + (error as Error).message);
+      Swal.fire({
+        icon: 'error',
+        title: 'Failed to execute transaction',
+        text: (error as Error)?.message ?? 'Unknown error occurred.',
+      });
     } finally {
       setIsDeploying(false);
     }
@@ -305,7 +323,11 @@ Package ID: ${deployedPackageId}`);
 
   const handleMintSwimmer = async (values: TMintSwimmerValues) => {
     if (!packageId) {
-      alert('Please deploy the smart contract first!');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Deployment required',
+        text: 'Please deploy the smart contract first.',
+      });
       return;
     }
 
@@ -314,7 +336,11 @@ Package ID: ${deployedPackageId}`);
     const sanitizedColor = sanitizedColorInput || mintingConfig.swimmerColor || '#00cc63';
 
     if (!sanitizedName) {
-      alert('Please enter a swimmer name first!');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Swimmer name required',
+        text: 'Please enter a swimmer name first.',
+      });
       return;
     }
 
@@ -353,17 +379,29 @@ Package ID: ${deployedPackageId}`);
         },
         {
           onSuccess: () => {
-            alert('A new Swimmer NFT has arrived!');
+            Swal.fire({
+              icon: 'success',
+              title: 'Swimmer minted',
+              text: 'A new Swimmer NFT has arrived!',
+            });
           },
           onError: (error) => {
             console.error('Transaction failed:', error);
-            alert('Transaction failed: ' + error.message);
+            Swal.fire({
+              icon: 'error',
+              title: 'Transaction failed',
+              text: (error as Error)?.message ?? String(error),
+            });
           },
         }
       );
     } catch (error) {
       console.error('Failed to create swimmer:', error);
-      alert('Failed to create swimmer!');
+      Swal.fire({
+        icon: 'error',
+        title: 'Failed to create swimmer',
+        text: 'Please try again in a moment.',
+      });
     } finally {
       setIsMinting(false);
     }

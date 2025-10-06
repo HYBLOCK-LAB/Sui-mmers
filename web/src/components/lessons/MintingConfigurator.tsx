@@ -2,6 +2,7 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import Swal from 'sweetalert2';
 import { DEFAULT_VALUES } from '@/src/contracts/moveTemplates';
 
 const START_LOCATIONS = [
@@ -307,7 +308,11 @@ export function MintingConfigurator({
     };
 
     if (!payload.name) {
-      alert('Please enter a swimmer name first!');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Swimmer name required',
+        text: 'Please enter a swimmer name first.',
+      });
 
       return;
     }
