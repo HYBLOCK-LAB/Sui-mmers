@@ -245,10 +245,6 @@ export function LessonPageClient({
       signAndExecute(
         {
           transaction,
-          options: {
-            showObjectChanges: true, // Enable object changes to get package details
-            showEffects: true,
-          },
         },
         {
           onSuccess: async (result) => {

@@ -77,7 +77,11 @@ function GameplayContent() {
 
   const fetchPackageIdByDigest = useCallback(async (digest: string | undefined | null) => {
     if (!digest) return null;
-    const network = process.env.NEXT_PUBLIC_SUI_NETWORK ?? 'testnet';
+    const network = (process.env.NEXT_PUBLIC_SUI_NETWORK ?? 'testnet') as
+      | 'mainnet'
+      | 'testnet'
+      | 'devnet'
+      | 'localnet';
     const client = new SuiClient({ url: getFullnodeUrl(network) });
     const maxAttempts = 5;
     const retryDelayMs = 1000;
@@ -411,13 +415,13 @@ function GameplayContent() {
     setIsDeploying(true);
     try {
       signAndExecute(
-        {
+        ({ // cast to any to allow including options that aren't present on the hook's arg type
           transaction,
           options: {
             showObjectChanges: true, // Enable object changes to get package details
             showEffects: true,
           },
-        },
+        } as any),
         {
           onSuccess: async (result) => {
             console.log('[Gameplay] transaction succeeded', result);

@@ -182,22 +182,18 @@ export function SwimmingPool({
       const hue = rgbToHue(selectedColor.r, selectedColor.g, selectedColor.b)
       const newImages = new Map(recoloredImages)
       
-      // 각 방향과 프레임에 대해 색상 재적용
-      const directions: ('right' | 'left')[] = ['right', 'left']
-      for (const direction of directions) {
-        for (const frame of animationSequence) {
-          const img = new Image()
-          img.crossOrigin = 'anonymous'
-          img.onload = () => {
-            const recoloredDataUrl = recolorImageByHue(img, hue)
-            if (recoloredDataUrl) {
-              newImages.set(`swimmer-${direction}-frame-${frame}`, recoloredDataUrl)
-              setRecoloredImages(new Map(newImages))
-            }
+      // 각 애니메이션 프레임에 대해 색상 재적용
+      for (const frame of animationSequence) {
+        const img = new Image()
+        img.crossOrigin = 'anonymous'
+        img.onload = () => {
+          const recoloredDataUrl = recolorImageByHue(img, hue)
+          if (recoloredDataUrl) {
+            newImages.set(`swimmer-frame-${frame}`, recoloredDataUrl)
+            setRecoloredImages(new Map(newImages))
           }
-          // img.src = getSwimmerImagePath(frame, direction)
-          img.src = getSwimmerImagePath(frame)
         }
+        img.src = getSwimmerImagePath(frame)
       }
     }
 
@@ -251,7 +247,7 @@ export function SwimmingPool({
           <div className="relative flex items-center justify-center h-full">
             <div className="text-center bg-white/80 rounded-lg p-6">
               <img 
-                src={recoloredImages.get(`swimmer-right-frame-${getCurrentFrame()}`) || `/images/mint_water(${getCurrentFrame()}).png`} 
+                src={recoloredImages.get(`swimmer-frame-${getCurrentFrame()}`) || `/images/mint_water(${getCurrentFrame()}).png`} 
                 alt="Swimmer" 
                 className="w-16 h-16 mx-auto mb-4" 
               />
@@ -322,7 +318,7 @@ export function SwimmingPool({
             const currentFrame = getCurrentFrame()
             // const direction = getSwimmerDirection(swimmer, index)
             // const frameImage = recoloredImages.get(`swimmer-${direction}-frame-${currentFrame}`) || getSwimmerImagePath(currentFrame, direction)
-            const frameImage = recoloredImages.get(`swimmer-frame-${currentFrame}`)
+            const frameImage = recoloredImages.get(`swimmer-frame-${currentFrame}`) || getSwimmerImagePath(currentFrame)
             
             return (
               <div
