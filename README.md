@@ -60,7 +60,7 @@ cd sources
 sui move build
 sui client publish --gas-budget 40000000```
 
-Save the returned PACKAGE_ID.
+Save the returned PACKAGE_ID. 
 
 Initialize the Registry
 
